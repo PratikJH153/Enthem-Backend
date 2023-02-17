@@ -23,79 +23,81 @@ export default (app: Router) => {
     const session = db.session({ database: "neo4j" });
         
     // Get User Data
-    route.get('/', async (req: Request, res: Response, next: NextFunction) => {
+    route.get('/:sessionId', async (req: Request, res: Response, next: NextFunction) => {
         try {
             const query =
             `
-            MATCH (n:User)
+            MATCH (n:User{sessionId:"${req.params.sessionId}"})
             RETURN n;
             `;
             
             const result = await session.run(query);
             console.log("RESULT:");
-            result.records.forEach(i=>console.log(i.get("n").properties));
+            const resultList = [];
+            result.records.forEach(i=> resultList.push(i.get("n").properties));
             
-            return res.status(201).json({ "Server Working": true });
+            return res.status(201).json({ "status": 200, "data": resultList});
         } catch (e) {
             return next(e);
         }
     });  
 
     // Create User Data
-    route.post('/', async (req: Request, res: Response, next: NextFunction) => {
+    route.post('/:sessionId', async (req: Request, res: Response, next: NextFunction) => {
         try {
             const query =
                 `
-                MATCH (n:User)
-                RETURN n;
+                MERGE (u:User {sessionId:"${req.params.sessionId}"})
+                ON CREATE SET u.age = ${req.body.age}, 
+                                u.gender = "${req.body.gender}",
+                                u.sessionId="${req.params.sessionId}" ,
+                                u.latitude = ${req.body.latitude},
+                                u.longitude = ${req.body.longitude},
+                                u.name = "${req.body.name}"
+                RETURN u
                 `;
     
-            const session = db.session({ database: "neo4j" });
-            const result = await session.run(query);
-            console.log("RESULT:");
-            result.records.forEach(i=>console.log(i.get("n").properties));
-    
-            return res.status(201).json({ "Server Working": true });
+                const result = await session.run(query);
+                console.log("RESULT:");
+                const resultList = [];
+                result.records.forEach(i=> resultList.push(i.get("u").properties));
+                
+                return res.status(201).json({ "status": 200, "data": resultList});
         } catch (e) {
             return next(e);
         }
     });
 
     // Update User Data
-    route.put('/', async (req: Request, res: Response, next: NextFunction) => {
+    route.put('/:sessionId', async (req: Request, res: Response, next: NextFunction) => {
         try {
             const query =
                 `
-                MATCH (n:User)
-                RETURN n;
+                MATCH (u:User {sessionId:"${req.params.sessionId}"}) SET u.age= ${req.body.age} RETURN u
                 `;
 
-            const session = db.session({ database: "neo4j" });
-            const result = await session.run(query);
-            console.log("RESULT:");
-            result.records.forEach(i=>console.log(i.get("n").properties));
-
-            return res.status(201).json({ "Server Working": true });
+                const result = await session.run(query);
+                console.log("RESULT:");
+                const resultList = [];
+                result.records.forEach(i=> resultList.push(i.get("u").properties));
+                
+                return res.status(201).json({ "status": 200, "data": resultList});
         } catch (e) {
             return next(e);
         }
     });    
 
     // Delete User Data
-    route.delete('/', async (req: Request, res: Response, next: NextFunction) => {
+    route.delete('/:sessionId', async (req: Request, res: Response, next: NextFunction) => {
         try {
             const query =
                 `
-                MATCH (n:User)
-                RETURN n;
+                MATCH (u:User {sessionId: "${req.params.sessionId}"}) DETACH DELETE u
                 `;
 
             const session = db.session({ database: "neo4j" });
             const result = await session.run(query);
-            console.log("RESULT:");
-            result.records.forEach(i=>console.log(i.get("n").properties));
-
-            return res.status(201).json({ "Server Working": true });
+            console.log("User Profile Deleted Successfully !");
         } catch (e) {
             return next(e);
         }
