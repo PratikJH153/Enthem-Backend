@@ -80,7 +80,7 @@ export default (app: Router) => {
                 const resultList = [];
                 result.records.forEach(i=> resultList.push(i.get("u").properties));
                 
-                return res.status(201).json({ "status": 200, "data": resultList});
+                return res.status(201).json({ "status": 201, "data": resultList});
         } catch (e) {
             return next(e);
         }
