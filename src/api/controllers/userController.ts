@@ -147,9 +147,13 @@ const locRecommend = async (req: Request, res: Response, next: NextFunction) => 
 
     const result = await session.run(query);
     const resultList = result.records.map(record => ({
+      id:record.get(null),
       name: record.get('name'),
       age: record.get('age').toNumber(),
       photoURL: record.get('photoURL'),
+      skills:record.get(null),
+      interests:record.get(null),
+      compatible:record.get(null),
       latitude: record.get('latitude'),
       longitude: record.get('longitude')
     }));
