@@ -140,16 +140,20 @@ const locRecommend = async (req: Request, res: Response, next: NextFunction) => 
           toFloat(u2.longitude) * pi() / 180.0 AS lon2,
           3959.0 AS r
       WITH u, u2, r * asin(sqrt(sin((lat2 - lat1) / 2)^2 + cos(lat1) * cos(lat2) * sin((lon2 - lon1) / 2)^2)) * 2.0 AS distance
-      WHERE distance <= 100.0
+      WHERE distance <= ${req.body.radius}
       RETURN DISTINCT u2.name as name, u2.age as age, u2.latitude as latitude, u2.longitude as longitude, u2.photoURL as photoURL
     
     `;
 
     const result = await session.run(query);
     const resultList = result.records.map(record => ({
+      id:record.get(null),
       name: record.get('name'),
       age: record.get('age').toNumber(),
       photoURL: record.get('photoURL'),
+      skills:record.get(null),
+      interests:record.get(null),
+      compatible:record.get(null),
       latitude: record.get('latitude'),
       longitude: record.get('longitude')
     }));
@@ -178,7 +182,7 @@ const recommendUser = async (req: Request, res: Response, next: NextFunction) =>
           cos(lat1) AS c,
           cos(lat2) AS d
       WITH u, u2, s, r * asin(sqrt(a^2 + c * d * b^2)) AS distance
-      WHERE distance <=100
+      WHERE distance <=${req.body.radius}
       RETURN DISTINCT u2.name as name, u2.age as age, u2.latitude as latitude, u2.longitude as longitude, u2.photoURL as photoURL
     `;
 
