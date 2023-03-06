@@ -10,21 +10,45 @@ const db = driver(config.databaseURL, auth.basic(config.dbUser, config.dbPass),
 
 const session = db.session({ database: "neo4j" });
 
-const updateUserAge = async (req: Request, res: Response, next: NextFunction) => {
+
+const updateUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const query = `
-      MATCH (u:User {id:"${req.body.id}"})
-      SET u.age = ${req.body.age}
-      RETURN u.age AS age
+    const { id, ...params } = req.body;
+    const existingUser = await session.run(`
+      MATCH (u:User {id: $id})
+      RETURN u
+    `, { id });
+
+    if (!existingUser.records.length) {
+      console.log('Sorry, No such user exists!');
+      return res.status(404).json({ status: 404, message: 'User not found' });
+    }
+
+    const setStatements = Object.entries(params).map(([key, value]) => `u.${key} = $${key}`);
+    const setQuery = setStatements.join(', ');
+
+    const updateQuery = `
+      MATCH (u:User {id: $id})
+      SET ${setQuery}
+      RETURN u.name AS name, u.age AS age, u. photoURL as photoURL, u.latitude AS latitude, u.longitude AS longitude, u.gender AS gender
     `;
-    const result = await session.run(query);
-    const resultList = result.records.map((record) => record.get('age').toNumber().properties);
-    return res.status(201).json({ status: 200, data: resultList });
+
+    const result = await session.run(updateQuery, { id, ...params });
+    const resultList = result.records.map(record => ({
+      name: record.get('name'),
+      age: record.get('age'),
+      gender:record.get('gender'),
+      photoURL: record.get('photoURL'),
+      latitude: record.get('latitude').toNumber(),
+      longitude: record.get('longitude').toNumber()
+    }));
+    return res.status(200).json({ status: 200, data: resultList });
   } catch (e) {
     debugError(e.toString());
     return next(e);
   }
 };
+
 
 
 const getUserBySessionId = async (req: Request, res: Response, next: NextFunction) => {
@@ -44,8 +68,8 @@ const getUserBySessionId = async (req: Request, res: Response, next: NextFunctio
       age: record.get('age').toNumber(),
       gender: record.get('gender'),
       photoURL: record.get('photoURL'),
-      latitude: record.get('latitude'),
-      longitude: record.get('longitude')
+      latitude: record.get('latitude').toNumber(),
+      longitude: record.get('longitude').toNumber()
     };
     return res.status(200).json({ status: 200, data });
   } catch (e) {
@@ -70,8 +94,8 @@ const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
       age: record.get('age').toNumber(),
       gender: record.get('gender'),
       photoURL: record.get('photoURL'),
-      latitude: record.get('latitude'),
-      longitude: record.get('longitude')
+      latitude: record.get('latitude').toNumber(),
+      longitude: record.get('longitude').toNumber()
     }));
     return res.status(200).json({ status: 200, data: resultList });
   } catch (e) {
@@ -81,12 +105,10 @@ const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
 };
 
 
-
-
 const createUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const query = `
-      MERGE (u:User {id:"${req.body.id}"})
+      MERGE (u:User {id:"${req.body.id}",emailId:"${req.body.email}"})
       ON CREATE SET u.id="${req.body.id}",
                     u.name = "${req.body.username}",
                     u.emailId="${req.body.email}",
@@ -97,15 +119,18 @@ const createUser = async (req: Request, res: Response, next: NextFunction) => {
                     u.longitude=${req.body.longitude}
       RETURN u
     `;
-    await session.run(query);
-    console.log("User Profile Created Successfully. Welcome to Enthem !");
+    const result = await session.run(query);
+    if (result.summary.counters.updates().nodesCreated === 0) {
+      console.log("User exists already");
+    } else {
+      console.log("User Profile Created Successfully. Welcome to Enthem !");
+    }
     return res.sendStatus(204);
   } catch (e) {
     debugError(e.toString());
     return next(e);
   }
 };
-
 
 
 const deleteUser = async (req: Request, res: Response, next: NextFunction) => {
@@ -249,7 +274,7 @@ const createInterests = async (req: Request, res: Response, next: NextFunction) 
 
 
 module.exports = {
-  updateUserAge,
+  updateUser,
   getUserBySessionId,
   getAllUsers,
   createUser,

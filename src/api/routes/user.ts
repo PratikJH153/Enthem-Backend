@@ -19,7 +19,7 @@ export default (app: Router) => {
     route.post('/createInterests', checkAuth, userController.createInterests);
 
     //* PUT CALLS
-    route.put('/', checkAuth, userController.updateUserAge);
+    route.put('/', checkAuth, userController.updateUser);
 
     //* DELETE CALLS
     route.delete('/', checkAuth, userController.deleteUser);
