@@ -39,8 +39,8 @@ const updateUser = async (req: Request, res: Response, next: NextFunction) => {
       age: record.get('age'),
       gender:record.get('gender'),
       photoURL: record.get('photoURL'),
-      latitude: record.get('latitude').toNumber(),
-      longitude: record.get('longitude').toNumber()
+      latitude: record.get('latitude'),
+      longitude: record.get('longitude')
     }));
     return res.status(200).json({ status: 200, data: resultList });
   } catch (e) {
@@ -126,7 +126,7 @@ const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
 const createUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const query = `
-      MERGE (u:User {id:"${req.body.id}",emailId:"${req.body.email}"})
+      MERGE (u:User {id:"${req.body.id}"})
       ON CREATE SET u.id="${req.body.id}",
                     u.name = "${req.body.username}",
                     u.emailId="${req.body.email}",
@@ -149,19 +149,30 @@ const createUser = async (req: Request, res: Response, next: NextFunction) => {
 };
 
 
+
 const deleteUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const query = `
       MATCH (u:User {id: "${req.body.id}"})
-      DETACH DELETE u
+      WITH u LIMIT 1
+      OPTIONAL MATCH (u)-[r]-()
+      DELETE u, r
+      RETURN COUNT(u) as deleted
     `;
-    await session.run(query);
-    return res.status(200).json({ status: 200, data: "User Profile Deleted Successfully !" });
+    const result = await session.run(query);
+    const deleted = result.records[0].get("deleted").toNumber();
+    if (deleted === 0) {
+      return res.status(404).json({ status: 404, data: "User does not exist and cannot be deleted." });
+    } else {
+      return res.status(200).json({ status: 200, data: "User Profile Deleted Successfully !" });
+    }
   } catch (e) {
     debugError(e.toString());
-    return next(e);
+    return res.status(500).json({ status: 500, data: "Sorry, there was an error deleting the user." });
   }
 };
+
+
 
 
 const locRecommend = async (req: Request, res: Response, next: NextFunction) => {
@@ -193,9 +204,9 @@ const locRecommend = async (req: Request, res: Response, next: NextFunction) => 
       photoURL: record.get('photoURL'),
       interests:[],
       compatible:null,
-      latitude: record.get('latitude').toNumber(),
-      longitude: record.get('longitude').toNumber(),
-      distance: record.get('distance').toNumber()
+      latitude: record.get('latitude').toFloat(),
+      longitude: record.get('longitude').toFloat(),
+      distance: record.get('distance').toFloat()
     }));
     return res.status(200).json({ status: 200, data: resultList });
   } catch (e) {
@@ -208,7 +219,7 @@ const locRecommend = async (req: Request, res: Response, next: NextFunction) => 
 const recommendUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const query = `
-      MATCH (u:User)-[:HAS_SKILL]->(s:Activity)<-[:HAS_INTEREST]-(u2:User)
+      MATCH (u:User)-[:HAS_SKILL]->(s:Activity)<-[:HAS_SKILL]-(u2:User)
       WHERE u.id = "${req.body.id}"
       AND u.latitude IS NOT NULL AND u.longitude IS NOT NULL 
       AND u2.id <> u.id 
@@ -255,10 +266,7 @@ const createSkills = async (req: Request, res: Response, next: NextFunction) => 
     `;
 
     const result = await session.run(query);
-    console.log("RESULT:");
-    const resultList = "Done Skills";
-
-    return res.status(201).json({ status: 201, data: resultList });
+    return res.status(201).json({ status: 201, data:"Done creating skills" });
   } catch (e) {
     debugError(e.toString());
     return next(e);
@@ -278,10 +286,7 @@ const createInterests = async (req: Request, res: Response, next: NextFunction) 
     `;
 
     const result = await session.run(query);
-    console.log("RESULT:");
-    const resultList = "Done Interests";
-
-    return res.status(201).json({ status: 201, data: resultList });
+    return res.status(201).json({ status: 201, data: "Done creating Interests" });
   } catch (e) {
     debugError(e.toString());
     return next(e);
