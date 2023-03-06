@@ -10,21 +10,45 @@ const db = driver(config.databaseURL, auth.basic(config.dbUser, config.dbPass),
 
 const session = db.session({ database: "neo4j" });
 
-const updateUserAge = async (req: Request, res: Response, next: NextFunction) => {
+
+const updateUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const query = `
-      MATCH (u:User {id:"${req.body.id}"})
-      SET u.age = ${req.body.age}
-      RETURN u.age AS age
+    const { id, ...params } = req.body;
+    const existingUser = await session.run(`
+      MATCH (u:User {id: $id})
+      RETURN u
+    `, { id });
+
+    if (!existingUser.records.length) {
+      console.log('Sorry, No such user exists!');
+      return res.status(404).json({ status: 404, message: 'User not found' });
+    }
+
+    const setStatements = Object.entries(params).map(([key, value]) => `u.${key} = $${key}`);
+    const setQuery = setStatements.join(', ');
+
+    const updateQuery = `
+      MATCH (u:User {id: $id})
+      SET ${setQuery}
+      RETURN u.name AS name, u.age AS age, u. photoURL as photoURL, u.latitude AS latitude, u.longitude AS longitude, u.gender AS gender
     `;
-    const result = await session.run(query);
-    const resultList = result.records.map((record) => record.get('age').toNumber().properties);
-    return res.status(201).json({ status: 200, data: resultList });
+
+    const result = await session.run(updateQuery, { id, ...params });
+    const resultList = result.records.map(record => ({
+      name: record.get('name'),
+      age: record.get('age'),
+      gender:record.get('gender'),
+      photoURL: record.get('photoURL'),
+      latitude: record.get('latitude').toNumber(),
+      longitude: record.get('longitude').toNumber()
+    }));
+    return res.status(200).json({ status: 200, data: resultList });
   } catch (e) {
     debugError(e.toString());
     return next(e);
   }
 };
+
 
 
 const getUserBySessionId = async (req: Request, res: Response, next: NextFunction) => {
@@ -47,7 +71,7 @@ const getUserBySessionId = async (req: Request, res: Response, next: NextFunctio
       latitude: record.get('latitude').toNumber(),
       longitude: record.get('longitude').toNumber(),
     };
-    return res.status(200).json({ status: 200, data });
+    return res.status(200).json({ status: 200, data: data });
   } catch (e) {
     debugError(e.toString());
     return next(e);
@@ -99,12 +123,10 @@ const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
 };
 
 
-
-
 const createUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const query = `
-      MERGE (u:User {id:"${req.body.id}"})
+      MERGE (u:User {id:"${req.body.id}",emailId:"${req.body.email}"})
       ON CREATE SET u.id="${req.body.id}",
                     u.name = "${req.body.username}",
                     u.emailId="${req.body.email}",
@@ -115,14 +137,16 @@ const createUser = async (req: Request, res: Response, next: NextFunction) => {
                     u.longitude=${req.body.longitude}
       RETURN u
     `;
-    await session.run(query);
-    return res.status(201).json({ status: 201, data: "User Profile Created Successfully. Welcome to Enthem !" });;
+    const result = await session.run(query);
+    if (result.summary.counters.updates().nodesCreated === 0) {
+      return res.status(409).json({ status: 409, data: "User already exists!" });
+    }
+    return res.status(200).json({ status: 200, data: "User Profile Created Successfully. Welcome to Enthem !" });
   } catch (e) {
     debugError(e.toString());
     return next(e);
   }
 };
-
 
 
 const deleteUser = async (req: Request, res: Response, next: NextFunction) => {
@@ -132,8 +156,7 @@ const deleteUser = async (req: Request, res: Response, next: NextFunction) => {
       DETACH DELETE u
     `;
     await session.run(query);
-    console.log("User Profile Deleted Successfully !");
-    return res.sendStatus(204);
+    return res.status(200).json({ status: 200, data: "User Profile Deleted Successfully !" });
   } catch (e) {
     debugError(e.toString());
     return next(e);
@@ -235,7 +258,7 @@ const createSkills = async (req: Request, res: Response, next: NextFunction) => 
     console.log("RESULT:");
     const resultList = "Done Skills";
 
-    return res.status(201).json({ status: 200, data: resultList });
+    return res.status(201).json({ status: 201, data: resultList });
   } catch (e) {
     debugError(e.toString());
     return next(e);
@@ -258,7 +281,7 @@ const createInterests = async (req: Request, res: Response, next: NextFunction) 
     console.log("RESULT:");
     const resultList = "Done Interests";
 
-    return res.status(201).json({ status: 200, data: resultList });
+    return res.status(201).json({ status: 201, data: resultList });
   } catch (e) {
     debugError(e.toString());
     return next(e);
@@ -267,7 +290,7 @@ const createInterests = async (req: Request, res: Response, next: NextFunction) 
 
 
 module.exports = {
-  updateUserAge,
+  updateUser,
   getUserBySessionId,
   getAllUsers,
   isUserExists,
