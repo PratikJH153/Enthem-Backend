@@ -108,7 +108,7 @@ const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
 const createUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const query = `
-      MERGE (u:User {id:"${req.body.id}",emailId:"${req.body.email}"})
+      MERGE (u:User {emailId:"${req.body.email}"})
       ON CREATE SET u.id="${req.body.id}",
                     u.name = "${req.body.username}",
                     u.emailId="${req.body.email}",
@@ -121,16 +121,16 @@ const createUser = async (req: Request, res: Response, next: NextFunction) => {
     `;
     const result = await session.run(query);
     if (result.summary.counters.updates().nodesCreated === 0) {
-      console.log("User exists already");
+      return res.status(409).json({ status: 409, data: "User already exists!" });
     } else {
-      console.log("User Profile Created Successfully. Welcome to Enthem !");
+      return res.status(200).json({ status: 200, data: "User Profile Created Successfully. Welcome to Enthem !" });
     }
-    return res.sendStatus(204);
   } catch (e) {
     debugError(e.toString());
     return next(e);
   }
 };
+
 
 
 const deleteUser = async (req: Request, res: Response, next: NextFunction) => {
@@ -140,8 +140,7 @@ const deleteUser = async (req: Request, res: Response, next: NextFunction) => {
       DETACH DELETE u
     `;
     await session.run(query);
-    console.log("User Profile Deleted Successfully !");
-    return res.sendStatus(204);
+    return res.status(200).json({ status: 200, data: "User Profile Deleted Successfully !" });
   } catch (e) {
     debugError(e.toString());
     return next(e);
@@ -242,7 +241,7 @@ const createSkills = async (req: Request, res: Response, next: NextFunction) => 
     console.log("RESULT:");
     const resultList = "Done Skills";
 
-    return res.status(201).json({ status: 200, data: resultList });
+    return res.status(200).json({ status: 200, data: resultList });
   } catch (e) {
     debugError(e.toString());
     return next(e);
@@ -265,7 +264,7 @@ const createInterests = async (req: Request, res: Response, next: NextFunction) 
     console.log("RESULT:");
     const resultList = "Done Interests";
 
-    return res.status(201).json({ status: 200, data: resultList });
+    return res.status(200).json({ status: 200, data: resultList });
   } catch (e) {
     debugError(e.toString());
     return next(e);
