@@ -105,31 +105,45 @@ const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
 };
 
 
+
 const createUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const query = `
-      MERGE (u:User {id:"${req.body.id}"})
-      ON CREATE SET u.id="${req.body.id}",
-                    u.name = "${req.body.username}",
-                    u.emailId="${req.body.email}",
-                    u.photoURL="${req.body.photoURL}",
-                    u.gender = COALESCE("${req.body.gender}","Unknown"),
-                    u.age = COALESCE(${req.body.age},20),
-                    u.latitude=${req.body.latitude},
-                    u.longitude=${req.body.longitude}
+      MATCH (u:User {id:"${req.body.id}"})
+      RETURN u
+      UNION
+      MATCH (u:User {emailId:"${req.body.email}"})
       RETURN u
     `;
     const result = await session.run(query);
-    if (result.summary.counters.updates().nodesCreated === 0) {
-      return res.status(409).json({ status: 409, data: "User already exists!" });
+    if (result.records.length > 0) {
+      const existingUser = result.records[0].toObject();
+      return res.status(409).json({ status: 409, data: "User already exists!", user: existingUser });
     } else {
-      return res.status(200).json({ status: 200, data: "User Profile Created Successfully. Welcome to Enthem !" });
+      const query = `
+        MERGE (u:User {id:"${req.body.id}"})
+        ON CREATE SET u.id="${req.body.id}",
+                      u.name = "${req.body.username}",
+                      u.emailId="${req.body.email}",
+                      u.photoURL="${req.body.photoURL}",
+                      u.gender = COALESCE("${req.body.gender}","Unknown"),
+                      u.age = COALESCE(${req.body.age},20),
+                      u.latitude=${req.body.latitude},
+                      u.longitude=${req.body.longitude}
+        RETURN u.name as name, u.emailId as email, u.age as age, u.photoURL as photoURL, u.gender as gender
+      `;
+      const result = await session.run(query);
+      const newUser = result.records[0].toObject();
+      return res.status(200).json({ status: 200, data: "User Profile Created Successfully. Welcome to Enthem !", user: newUser });
     }
   } catch (e) {
     debugError(e.toString());
     return next(e);
   }
 };
+
+
+
 
 
 
