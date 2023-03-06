@@ -44,10 +44,28 @@ const getUserBySessionId = async (req: Request, res: Response, next: NextFunctio
       age: record.get('age').toNumber(),
       gender: record.get('gender'),
       photoURL: record.get('photoURL'),
-      latitude: record.get('latitude'),
-      longitude: record.get('longitude')
+      latitude: record.get('latitude').toNumber(),
+      longitude: record.get('longitude').toNumber(),
     };
     return res.status(200).json({ status: 200, data });
+  } catch (e) {
+    debugError(e.toString());
+    return next(e);
+  }
+};
+
+const isUserExists = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const query = `
+      MATCH (n:User {id:"${req.body.id}"})
+      RETURN n.id AS id;
+    `;
+    const result = await session.run(query);
+    const record = result.records[0];
+    if (record != null){
+      return res.status(200).json({ status: 200, data: true });
+    }
+    return res.status(404).json({ status: 404, data: false });
   } catch (e) {
     debugError(e.toString());
     return next(e);
@@ -70,8 +88,8 @@ const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
       age: record.get('age').toNumber(),
       gender: record.get('gender'),
       photoURL: record.get('photoURL'),
-      latitude: record.get('latitude'),
-      longitude: record.get('longitude')
+      latitude: record.get('latitude').toNumber(),
+      longitude: record.get('longitude').toNumber()
     }));
     return res.status(200).json({ status: 200, data: resultList });
   } catch (e) {
@@ -98,8 +116,7 @@ const createUser = async (req: Request, res: Response, next: NextFunction) => {
       RETURN u
     `;
     await session.run(query);
-    console.log("User Profile Created Successfully. Welcome to Enthem !");
-    return res.sendStatus(204);
+    return res.status(201).json({ status: 201, data: "User Profile Created Successfully. Welcome to Enthem !" });;
   } catch (e) {
     debugError(e.toString());
     return next(e);
@@ -153,9 +170,9 @@ const locRecommend = async (req: Request, res: Response, next: NextFunction) => 
       photoURL: record.get('photoURL'),
       interests:[],
       compatible:null,
-      latitude: record.get('latitude'),
-      longitude: record.get('longitude'),
-      distance: record.get('distance')
+      latitude: record.get('latitude').toNumber(),
+      longitude: record.get('longitude').toNumber(),
+      distance: record.get('distance').toNumber()
     }));
     return res.status(200).json({ status: 200, data: resultList });
   } catch (e) {
@@ -253,6 +270,7 @@ module.exports = {
   updateUserAge,
   getUserBySessionId,
   getAllUsers,
+  isUserExists,
   createUser,
   deleteUser,
   recommendUser,

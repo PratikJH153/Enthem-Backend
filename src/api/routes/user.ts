@@ -10,6 +10,7 @@ export default (app: Router) => {
     //* GET CALLS
     route.get('/all', checkAuth, userController.getAllUsers);
     route.get('/', checkAuth, userController.getUserBySessionId);
+    route.get('/exists', checkAuth, userController.isUserExists);
     route.get('/recommend', checkAuth, userController.recommendUser);
     route.get('/locRecommend',checkAuth,userController.locRecommend);
 
