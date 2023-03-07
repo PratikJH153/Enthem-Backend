@@ -150,6 +150,7 @@ const createUser = async (req: Request, res: Response, next: NextFunction) => {
 
 
 
+
 const deleteUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const query = `
