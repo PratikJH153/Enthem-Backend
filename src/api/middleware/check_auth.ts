@@ -2,7 +2,6 @@ import config from '../../config'
 import debugError from "../../services/debug_error";
 import {Request, Response, NextFunction} from "express";
 import jwt from "jsonwebtoken";
-import key from "../../services/generate_keys";
 
 //! Solve Container logger error
 const attachCurrentUser = async (req: Request, res: Response, next: NextFunction) => {
@@ -14,7 +13,6 @@ const attachCurrentUser = async (req: Request, res: Response, next: NextFunction
     
     try{
       if (authHeader && authHeader.includes('Bearer')) {
-        console.log(key);
         const token =  authHeader.split(' ')[1];
         const decoded = jwt.verify(token, config.jwtSecret);
         return next();

@@ -10,21 +10,45 @@ const db = driver(config.databaseURL, auth.basic(config.dbUser, config.dbPass),
 
 const session = db.session({ database: "neo4j" });
 
-const updateUserAge = async (req: Request, res: Response, next: NextFunction) => {
+
+const updateUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const query = `
-      MATCH (u:User {id:"${req.body.id}"})
-      SET u.age = ${req.body.age}
-      RETURN u.age AS age
+    const { id, ...params } = req.body;
+    const existingUser = await session.run(`
+      MATCH (u:User {id: $id})
+      RETURN u
+    `, { id });
+
+    if (!existingUser.records.length) {
+      console.log('Sorry, No such user exists!');
+      return res.status(404).json({ status: 404, message: 'User not found' });
+    }
+
+    const setStatements = Object.entries(params).map(([key, value]) => `u.${key} = $${key}`);
+    const setQuery = setStatements.join(', ');
+
+    const updateQuery = `
+      MATCH (u:User {id: $id})
+      SET ${setQuery}
+      RETURN u.name AS name, u.age AS age, u. photoURL as photoURL, u.latitude AS latitude, u.longitude AS longitude, u.gender AS gender
     `;
-    const result = await session.run(query);
-    const resultList = result.records.map((record) => record.get('age').toNumber().properties);
-    return res.status(201).json({ status: 200, data: resultList });
+
+    const result = await session.run(updateQuery, { id, ...params });
+    const resultList = result.records.map(record => ({
+      name: record.get('name'),
+      age: record.get('age'),
+      gender:record.get('gender'),
+      photoURL: record.get('photoURL'),
+      latitude: record.get('latitude'),
+      longitude: record.get('longitude')
+    }));
+    return res.status(200).json({ status: 200, data: resultList });
   } catch (e) {
     debugError(e.toString());
     return next(e);
   }
 };
+
 
 
 const getUserBySessionId = async (req: Request, res: Response, next: NextFunction) => {
@@ -44,10 +68,28 @@ const getUserBySessionId = async (req: Request, res: Response, next: NextFunctio
       age: record.get('age').toNumber(),
       gender: record.get('gender'),
       photoURL: record.get('photoURL'),
-      latitude: record.get('latitude'),
-      longitude: record.get('longitude')
+      latitude: record.get('latitude').toNumber(),
+      longitude: record.get('longitude').toNumber(),
     };
-    return res.status(200).json({ status: 200, data });
+    return res.status(200).json({ status: 200, data: data });
+  } catch (e) {
+    debugError(e.toString());
+    return next(e);
+  }
+};
+
+const isUserExists = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const query = `
+      MATCH (n:User {id:"${req.body.id}"})
+      RETURN n.id AS id;
+    `;
+    const result = await session.run(query);
+    const record = result.records[0];
+    if (record != null){
+      return res.status(200).json({ status: 200, data: true });
+    }
+    return res.status(404).json({ status: 404, data: false });
   } catch (e) {
     debugError(e.toString());
     return next(e);
@@ -70,8 +112,8 @@ const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
       age: record.get('age').toNumber(),
       gender: record.get('gender'),
       photoURL: record.get('photoURL'),
-      latitude: record.get('latitude'),
-      longitude: record.get('longitude')
+      latitude: record.get('latitude').toNumber(),
+      longitude: record.get('longitude').toNumber()
     }));
     return res.status(200).json({ status: 200, data: resultList });
   } catch (e) {
@@ -79,8 +121,6 @@ const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
     return next(e);
   }
 };
-
-
 
 
 const createUser = async (req: Request, res: Response, next: NextFunction) => {
@@ -97,9 +137,11 @@ const createUser = async (req: Request, res: Response, next: NextFunction) => {
                     u.longitude=${req.body.longitude}
       RETURN u
     `;
-    await session.run(query);
-    console.log("User Profile Created Successfully. Welcome to Enthem !");
-    return res.sendStatus(204);
+    const result = await session.run(query);
+    if (result.summary.counters.updates().nodesCreated === 0) {
+      return res.status(409).json({ status: 409, data: "User already exists!" });
+    }
+    return res.status(200).json({ status: 200, data: "User Profile Created Successfully. Welcome to Enthem !" });
   } catch (e) {
     debugError(e.toString());
     return next(e);
@@ -112,16 +154,25 @@ const deleteUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const query = `
       MATCH (u:User {id: "${req.body.id}"})
-      DETACH DELETE u
+      WITH u LIMIT 1
+      OPTIONAL MATCH (u)-[r]-()
+      DELETE u, r
+      RETURN COUNT(u) as deleted
     `;
-    await session.run(query);
-    console.log("User Profile Deleted Successfully !");
-    return res.sendStatus(204);
+    const result = await session.run(query);
+    const deleted = result.records[0].get("deleted").toNumber();
+    if (deleted === 0) {
+      return res.status(404).json({ status: 404, data: "User does not exist and cannot be deleted." });
+    } else {
+      return res.status(200).json({ status: 200, data: "User Profile Deleted Successfully !" });
+    }
   } catch (e) {
     debugError(e.toString());
-    return next(e);
+    return res.status(500).json({ status: 500, data: "Sorry, there was an error deleting the user." });
   }
 };
+
+
 
 
 const locRecommend = async (req: Request, res: Response, next: NextFunction) => {
@@ -140,18 +191,22 @@ const locRecommend = async (req: Request, res: Response, next: NextFunction) => 
           toFloat(u2.longitude) * pi() / 180.0 AS lon2,
           3959.0 AS r
       WITH u, u2, r * asin(sqrt(sin((lat2 - lat1) / 2)^2 + cos(lat1) * cos(lat2) * sin((lon2 - lon1) / 2)^2)) * 2.0 AS distance
-      WHERE distance <= 100.0
-      RETURN DISTINCT u2.name as name, u2.age as age, u2.latitude as latitude, u2.longitude as longitude, u2.photoURL as photoURL
+      WHERE distance <= ${req.body.radius}
+      RETURN DISTINCT u2.id as id, u2.name as name, u2.age as age, u2.latitude as latitude, u2.longitude as longitude, u2.photoURL as photoURL, distance
     
     `;
 
     const result = await session.run(query);
     const resultList = result.records.map(record => ({
+      id:record.get('id'),
       name: record.get('name'),
       age: record.get('age').toNumber(),
       photoURL: record.get('photoURL'),
-      latitude: record.get('latitude'),
-      longitude: record.get('longitude')
+      interests:[],
+      compatible:null,
+      latitude: record.get('latitude').toFloat(),
+      longitude: record.get('longitude').toFloat(),
+      distance: record.get('distance').toFloat()
     }));
     return res.status(200).json({ status: 200, data: resultList });
   } catch (e) {
@@ -164,7 +219,7 @@ const locRecommend = async (req: Request, res: Response, next: NextFunction) => 
 const recommendUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const query = `
-      MATCH (u:User)-[:HAS_SKILL]->(s:Activity)<-[:HAS_INTEREST]-(u2:User)
+      MATCH (u:User)-[:HAS_SKILL]->(s:Activity)<-[:HAS_SKILL]-(u2:User)
       WHERE u.id = "${req.body.id}"
       AND u.latitude IS NOT NULL AND u.longitude IS NOT NULL 
       AND u2.id <> u.id 
@@ -178,8 +233,8 @@ const recommendUser = async (req: Request, res: Response, next: NextFunction) =>
           cos(lat1) AS c,
           cos(lat2) AS d
       WITH u, u2, s, r * asin(sqrt(a^2 + c * d * b^2)) AS distance
-      WHERE distance <=100
-      RETURN DISTINCT u2.name as name, u2.age as age, u2.latitude as latitude, u2.longitude as longitude, u2.photoURL as photoURL
+      WHERE distance <=${req.body.radius}
+      RETURN DISTINCT u2.name as name, u2.age as age, u2.latitude as latitude, u2.longitude as longitude, u2.photoURL as photoURL, distance
     `;
 
     const result = await session.run(query);
@@ -188,7 +243,8 @@ const recommendUser = async (req: Request, res: Response, next: NextFunction) =>
       age: record.get('age').toNumber(),
       photoURL: record.get('photoURL'),
       latitude: record.get('latitude'),
-      longitude: record.get('longitude')
+      longitude: record.get('longitude'),
+      distance: record.get('distance')
     }));
     return res.status(200).json({ status: 200, data: resultList });
   } catch (e) {
@@ -210,10 +266,7 @@ const createSkills = async (req: Request, res: Response, next: NextFunction) => 
     `;
 
     const result = await session.run(query);
-    console.log("RESULT:");
-    const resultList = "Done Skills";
-
-    return res.status(201).json({ status: 200, data: resultList });
+    return res.status(201).json({ status: 201, data:"Done creating skills" });
   } catch (e) {
     debugError(e.toString());
     return next(e);
@@ -233,10 +286,7 @@ const createInterests = async (req: Request, res: Response, next: NextFunction) 
     `;
 
     const result = await session.run(query);
-    console.log("RESULT:");
-    const resultList = "Done Interests";
-
-    return res.status(201).json({ status: 200, data: resultList });
+    return res.status(201).json({ status: 201, data: "Done creating Interests" });
   } catch (e) {
     debugError(e.toString());
     return next(e);
@@ -245,9 +295,10 @@ const createInterests = async (req: Request, res: Response, next: NextFunction) 
 
 
 module.exports = {
-  updateUserAge,
+  updateUser,
   getUserBySessionId,
   getAllUsers,
+  isUserExists,
   createUser,
   deleteUser,
   recommendUser,
