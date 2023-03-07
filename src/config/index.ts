@@ -16,9 +16,11 @@ export default {
   dbUser: process.env.DB_USER,
   dbPass: process.env.DB_PASSWORD,
   progressToken: process.env.PROGRESS_TOKEN,
+  
+  mongoDB: process.env.MONGO_DB_URL,
+  mongoServer: process.env.MONGO_SERVER_NAME,
 
   jwtSecret: process.env.JWT_SECRET,
-  jwtAlgorithm: process.env.JWT_ALGO,
 
   logs: {
     level: process.env.LOG_LEVEL || 'silly',

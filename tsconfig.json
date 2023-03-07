@@ -1,8 +1,10 @@
 {
   "compilerOptions": {
-    "target": "es2017",
+    "rootDir":"./src",
+    "baseUrl":".",
+    "target": "es2022",
     "lib": [
-      "es2017",
+      "es2022",
       "esnext.asynciterable"
     ],
     "typeRoots": [
