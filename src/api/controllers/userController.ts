@@ -96,6 +96,25 @@ const isUserExists = async (req: Request, res: Response, next: NextFunction) => 
   }
 };
 
+const isUsernameExists = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    console.log(req.body.username);
+    const query = `
+      MATCH (n:User {name:"${req.body.username}"})
+      RETURN n.id AS id;
+    `;
+    const result = await session.run(query);
+    const record = result.records[0];
+    if (record != null){
+      return res.status(200).json({ status: 200, data: true });
+    }
+    return res.status(404).json({ status: 404, data: false });
+  } catch (e) {
+    debugError(e.toString());
+    return next(e);
+  }
+};
+
 const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const query = `
@@ -165,7 +184,7 @@ const deleteUser = async (req: Request, res: Response, next: NextFunction) => {
     if (deleted === 0) {
       return res.status(404).json({ status: 404, data: "User does not exist and cannot be deleted." });
     } else {
-      return res.status(200).json({ status: 200, data: "User Profile Deleted Successfully !" });
+      return res.status(201).json({ status: 201, data: "User Profile Deleted Successfully !" });
     }
   } catch (e) {
     debugError(e.toString());
@@ -300,6 +319,7 @@ module.exports = {
   getUserBySessionId,
   getAllUsers,
   isUserExists,
+  isUsernameExists,
   createUser,
   deleteUser,
   recommendUser,
