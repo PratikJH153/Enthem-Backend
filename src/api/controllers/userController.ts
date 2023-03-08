@@ -15,7 +15,7 @@ const updateUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id, ...params } = req.body;
     const existingUser = await session.run(`
-      MATCH (u:User {id: $id})
+      MATCH (u:User {id: "${req.body.id}"})
       RETURN u
     `, { id });
 
@@ -28,14 +28,14 @@ const updateUser = async (req: Request, res: Response, next: NextFunction) => {
     const setQuery = setStatements.join(', ');
 
     const updateQuery = `
-      MATCH (u:User {id: $id})
+      MATCH (u:User {id: "${req.body.id}"})
       SET ${setQuery}
-      RETURN u.name AS name, u.age AS age, u. photoURL as photoURL, u.latitude AS latitude, u.longitude AS longitude, u.gender AS gender
+      RETURN u.username AS username, u.age AS age, u. photoURL as photoURL, u.latitude AS latitude, u.longitude AS longitude, u.gender AS gender
     `;
 
     const result = await session.run(updateQuery, { id, ...params });
     const resultList = result.records.map(record => ({
-      name: record.get('name'),
+      username: record.get('username'),
       age: record.get('age'),
       gender:record.get('gender'),
       photoURL: record.get('photoURL'),
@@ -55,23 +55,27 @@ const getUserBySessionId = async (req: Request, res: Response, next: NextFunctio
   try {
     const query = `
       MATCH (n:User {id:"${req.body.id}"})
-      RETURN n.id AS id, n.name AS name, n.email AS email, n.age AS age,
+      RETURN n.id AS id, n.username AS username, n.email AS email, n.age AS age,
         n.gender AS gender, n.photoURL AS photoURL,
         n.latitude AS latitude, n.longitude AS longitude;
     `;
     const result = await session.run(query);
-    const record = result.records[0];
-    const data = {
-      id: record.get('id'),
-      name: record.get('name'),
-      emailId: record.get('email'),
-      age: record.get('age').toNumber(),
-      gender: record.get('gender'),
-      photoURL: record.get('photoURL'),
-      latitude: record.get('latitude').toNumber(),
-      longitude: record.get('longitude').toNumber(),
-    };
-    return res.status(200).json({ status: 200, data: data });
+    if (result.records.length > 0) {
+      const record = result.records[0];
+      const data = {
+          id: record.get('id'),
+          username: record.get('username'),
+          email: record.get('email'),
+          age: record.get('age').toNumber(),
+          gender: record.get('gender'),
+          photoURL: record.get('photoURL'),
+          latitude: record.get('latitude').toNumber(),
+          longitude: record.get('longitude').toNumber(),
+      };
+      return res.status(200).json({ status: 200, data });
+    } else {
+      return res.status(409).json({ status: 409, data: "Sorry, No User Exists with this ID !" });
+    }
   } catch (e) {
     debugError(e.toString());
     return next(e);
@@ -100,22 +104,26 @@ const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const query = `
       MATCH (n:User)
-      RETURN n.id AS id, n.name AS name, n.email AS emailId, n.age AS age,
+      RETURN n.id AS id, n.username AS username, n.email AS email, n.age AS age,
         n.gender AS gender, n.photoURL AS photoURL,
         n.latitude AS latitude, n.longitude AS longitude;
     `;
     const result = await session.run(query);
-    const resultList = result.records.map(record => ({
-      id: record.get('id'),
-      name: record.get('name'),
-      emailId: record.get('emailId'),
-      age: record.get('age').toNumber(),
-      gender: record.get('gender'),
-      photoURL: record.get('photoURL'),
-      latitude: record.get('latitude').toNumber(),
-      longitude: record.get('longitude').toNumber()
-    }));
-    return res.status(200).json({ status: 200, data: resultList });
+    if (result.records.length > 0) {
+      const resultList = result.records.map(record => ({
+        id: record.get('id'),
+        username: record.get('username'),
+        email: record.get('email'),
+        age: record.get('age').toNumber(),
+        gender: record.get('gender'),
+        photoURL: record.get('photoURL'),
+        latitude: record.get('latitude'),
+        longitude: record.get('longitude')
+      }));
+      return res.status(200).json({ status: 200, resultList});
+    } else {
+      return res.status(409).json({ status: 409, data: "Sorry, No User yet on Enthem" });
+    }
   } catch (e) {
     debugError(e.toString());
     return next(e);
@@ -128,8 +136,8 @@ const createUser = async (req: Request, res: Response, next: NextFunction) => {
     const query = `
       MERGE (u:User {id:"${req.body.id}"})
       ON CREATE SET u.id="${req.body.id}",
-                    u.name = "${req.body.username}",
-                    u.emailId="${req.body.email}",
+                    u.username = "${req.body.username}",
+                    u.email="${req.body.email}",
                     u.photoURL="${req.body.photoURL}",
                     u.gender = COALESCE("${req.body.gender}","Unknown"),
                     u.age = COALESCE(${req.body.age},20),
@@ -191,22 +199,22 @@ const locRecommend = async (req: Request, res: Response, next: NextFunction) => 
           toFloat(u2.longitude) * pi() / 180.0 AS lon2,
           3959.0 AS r
       WITH u, u2, r * asin(sqrt(sin((lat2 - lat1) / 2)^2 + cos(lat1) * cos(lat2) * sin((lon2 - lon1) / 2)^2)) * 2.0 AS distance
-      WHERE distance <= ${req.body.radius}
-      RETURN DISTINCT u2.id as id, u2.name as name, u2.age as age, u2.latitude as latitude, u2.longitude as longitude, u2.photoURL as photoURL, distance
+      WHERE distance <= 100
+      RETURN DISTINCT u2.id as id, u2.username as username, u2.age as age, u2.latitude as latitude, u2.longitude as longitude, u2.photoURL as photoURL, distance
     
     `;
 
     const result = await session.run(query);
     const resultList = result.records.map(record => ({
       id:record.get('id'),
-      name: record.get('name'),
+      username: record.get('username'),
       age: record.get('age').toNumber(),
       photoURL: record.get('photoURL'),
       interests:[],
       compatible:null,
-      latitude: record.get('latitude').toFloat(),
-      longitude: record.get('longitude').toFloat(),
-      distance: record.get('distance').toFloat()
+      latitude: record.get('latitude'),
+      longitude: record.get('longitude'),
+      distance: record.get('distance')
     }));
     return res.status(200).json({ status: 200, data: resultList });
   } catch (e) {
@@ -233,13 +241,13 @@ const recommendUser = async (req: Request, res: Response, next: NextFunction) =>
           cos(lat1) AS c,
           cos(lat2) AS d
       WITH u, u2, s, r * asin(sqrt(a^2 + c * d * b^2)) AS distance
-      WHERE distance <=${req.body.radius}
-      RETURN DISTINCT u2.name as name, u2.age as age, u2.latitude as latitude, u2.longitude as longitude, u2.photoURL as photoURL, distance
+      WHERE distance <=100
+      RETURN DISTINCT u2.username as username, u2.age as age, u2.latitude as latitude, u2.longitude as longitude, u2.photoURL as photoURL, distance
     `;
 
     const result = await session.run(query);
     const resultList = result.records.map(record => ({
-      name: record.get('name'),
+      username: record.get('username'),
       age: record.get('age').toNumber(),
       photoURL: record.get('photoURL'),
       latitude: record.get('latitude'),
@@ -253,13 +261,55 @@ const recommendUser = async (req: Request, res: Response, next: NextFunction) =>
   }
 };
 
+
+
+const compatibleUsers = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const query = `
+
+      MATCH (u:User)-[:HAS_INTEREST]->(s:Activity)<-[:HAS_INTEREST]-(u2:User)
+      WHERE u.id = "${req.body.id}"
+      AND u2.id <> u.id 
+      WITH u, u2, 
+          [(u)-[:HAS_INTEREST]->(i:Activity) | i.username] AS u_interests,
+          [(u2)-[:HAS_INTEREST]->(i:Activity) | i.username] AS u2_interests
+      WITH u, u2, 
+          apoc.coll.intersection(u_interests, u2_interests) AS common_interests,
+          toFloat(size(apoc.coll.intersection(u_interests, u2_interests))) / toFloat(size(u_interests)) AS u_similarity,
+          toFloat(size(apoc.coll.intersection(u_interests, u2_interests))) / toFloat(size(u2_interests)) AS u2_similarity
+      RETURN DISTINCT u2.username as username, u2.age as age, u2.latitude as latitude, 
+                      u2.longitude as longitude, u2.photoURL as photoURL, 
+                      toInteger(((u_similarity + u2_similarity) / 2) * 100) AS match_percentage
+      ORDER BY match_percentage DESC
+      SKIP 10 LIMIT 10
+    
+    `;
+
+    const result = await session.run(query);
+    const resultList = result.records.map(record => ({
+      username: record.get('username'),
+      age: record.get('age').toNumber(),
+      photoURL: record.get('photoURL'),
+      latitude: record.get('latitude'),
+      longitude: record.get('longitude'),
+      compatibiltiy: record.get('match_percentage').toNumber()
+    }));
+    return res.status(200).json({ status: 200, data: resultList });
+  } catch (e) {
+    debugError(e.toString());
+    return next(e);
+  }
+};
+
+
+
 const createSkills = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const skills = req.body.skills.map(skill => `"${skill}"`).join(', ');
     const query = `
       WITH [${skills}] AS skillsList
       UNWIND skillsList AS skill
-      MERGE (s:Activity {name:skill})
+      MERGE (s:Activity {username:skill})
       WITH s
       MATCH (u:User {id:"${req.body.id}"})
       MERGE (u)-[:HAS_SKILL]->(s)
@@ -279,7 +329,7 @@ const createInterests = async (req: Request, res: Response, next: NextFunction) 
     const query = `
       WITH [${interests}] AS interestsList
       UNWIND interestsList AS interest
-      MERGE (s:Activity {name:interest})
+      MERGE (s:Activity {username:interest})
       WITH s
       MATCH (u:User {id:"${req.body.id}"})
       MERGE (u)-[:HAS_INTEREST]->(s)
@@ -305,4 +355,5 @@ module.exports = {
   createSkills,
   createInterests,
   locRecommend,
+  compatibleUsers,
 };
