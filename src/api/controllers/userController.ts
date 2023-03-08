@@ -131,30 +131,66 @@ const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
 };
 
 
+
 const createUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const query = `
-      MERGE (u:User {id:"${req.body.id}"})
-      ON CREATE SET u.id="${req.body.id}",
-                    u.username = "${req.body.username}",
-                    u.email="${req.body.email}",
-                    u.photoURL="${req.body.photoURL}",
-                    u.gender = COALESCE("${req.body.gender}","Unknown"),
-                    u.age = COALESCE(${req.body.age},20),
-                    u.latitude=${req.body.latitude},
-                    u.longitude=${req.body.longitude}
-      RETURN u
-    `;
-    const result = await session.run(query);
-    if (result.summary.counters.updates().nodesCreated === 0) {
-      return res.status(409).json({ status: 409, data: "User already exists!" });
+
+    const userInput = req.body;
+
+    // Check if all required properties are present
+    if (!userInput.id || !userInput.username || !userInput.email || !userInput.latitude || !userInput.longitude) {
+      return res.status(400).json({ error: "Missing required fields" });
     }
-    return res.status(200).json({ status: 200, data: "User Profile Created Successfully. Welcome to Enthem !" });
+
+    const checkEmailQuery = `
+      MATCH (u:User)
+      WHERE u.email = "${userInput.email}" OR u.id = "${userInput.id}"
+      RETURN DISTINCT u.username as username, u.email as email, u.age as age, u.gender as gender, u.photoURL as photoURL
+    `;
+    const emailResult = await session.run(checkEmailQuery);
+    if (emailResult.records.length > 0) {
+      const resultListEmail = emailResult.records.map(record => ({
+        username: record.get('username'),
+        email: record.get('email'),
+        age: record.get('age').toNumber(),
+        gender: record.get('gender'),
+        photoURL: record.get('photoURL'),
+      }));
+      return res.status(409).json({
+        status: 409,
+        message: 'User already exists',
+        data: resultListEmail
+      });
+    }
+
+    const createQuery = `
+      CREATE (u:User {
+        id: "${userInput.id}",
+        username: "${userInput.username}",
+        email: "${userInput.email}",
+        photoURL: "${userInput.photoURL}",
+        gender: COALESCE("${userInput.gender}", "Unknown"),
+        age: COALESCE(${userInput.age}, 20),
+        latitude: ${userInput.latitude},
+        longitude: ${userInput.longitude}
+      })
+      RETURN u.username as username, u.age as age, u.email as email, u.photoURL as photoURL, u.gender as gender
+    `;
+    const createResult = await session.run(createQuery);
+    const resultList = createResult.records.map(record => ({
+      username: record.get('username'),
+      email: record.get('email'),
+      age: record.get('age').toNumber(),
+      gender: record.get('gender'),
+      photoURL: record.get('photoURL'),
+    }));
+    return res.status(200).json({ status: 200, data: resultList });
   } catch (e) {
     debugError(e.toString());
     return next(e);
   }
 };
+
 
 
 
@@ -200,23 +236,25 @@ const locRecommend = async (req: Request, res: Response, next: NextFunction) => 
           3959.0 AS r
       WITH u, u2, r * asin(sqrt(sin((lat2 - lat1) / 2)^2 + cos(lat1) * cos(lat2) * sin((lon2 - lon1) / 2)^2)) * 2.0 AS distance
       WHERE distance <= 100
-      RETURN DISTINCT u2.id as id, u2.username as username, u2.age as age, u2.latitude as latitude, u2.longitude as longitude, u2.photoURL as photoURL, distance
+      RETURN DISTINCT u2.username as username, u2.email as email, u2.gender as gender, u2.age as age, u2.latitude as latitude, u2.longitude as longitude, u2.photoURL as photoURL 
     
     `;
 
     const result = await session.run(query);
-    const resultList = result.records.map(record => ({
-      id:record.get('id'),
-      username: record.get('username'),
-      age: record.get('age').toNumber(),
-      photoURL: record.get('photoURL'),
-      interests:[],
-      compatible:null,
-      latitude: record.get('latitude'),
-      longitude: record.get('longitude'),
-      distance: record.get('distance')
-    }));
-    return res.status(200).json({ status: 200, data: resultList });
+    if (result.records.length > 0) {
+      const resultList = result.records.map(record => ({
+        username: record.get('username'),
+        email: record.get('email'),
+        age: record.get('age').toNumber(),
+        gender: record.get('gender'),
+        photoURL: record.get('photoURL'),
+        latitude: record.get('latitude'),
+        longitude: record.get('longitude')
+      }));
+      return res.status(200).json({ status: 200, resultList});
+    } else {
+      return res.status(409).json({ status: 409, data: "Sorry, No User match found nearby on Enthem, to Recommend!" });
+    }
   } catch (e) {
     debugError(e.toString());
     return next(e);
@@ -242,19 +280,24 @@ const recommendUser = async (req: Request, res: Response, next: NextFunction) =>
           cos(lat2) AS d
       WITH u, u2, s, r * asin(sqrt(a^2 + c * d * b^2)) AS distance
       WHERE distance <=100
-      RETURN DISTINCT u2.username as username, u2.age as age, u2.latitude as latitude, u2.longitude as longitude, u2.photoURL as photoURL, distance
+      RETURN DISTINCT u2.username as username, u2.email as email, u2.gender as gender, u2.age as age, u2.latitude as latitude, u2.longitude as longitude, u2.photoURL as photoURL
     `;
 
     const result = await session.run(query);
-    const resultList = result.records.map(record => ({
-      username: record.get('username'),
-      age: record.get('age').toNumber(),
-      photoURL: record.get('photoURL'),
-      latitude: record.get('latitude'),
-      longitude: record.get('longitude'),
-      distance: record.get('distance')
-    }));
-    return res.status(200).json({ status: 200, data: resultList });
+    if (result.records.length > 0) {
+      const resultList = result.records.map(record => ({
+        username: record.get('username'),
+        email: record.get('email'),
+        age: record.get('age').toNumber(),
+        gender: record.get('gender'),
+        photoURL: record.get('photoURL'),
+        latitude: record.get('latitude'),
+        longitude: record.get('longitude')
+      }));
+      return res.status(200).json({ status: 200, resultList});
+    } else {
+      return res.status(409).json({ status: 409, data: "Sorry, No User match found nearby on Enthem, to Recommend!" });
+    }
   } catch (e) {
     debugError(e.toString());
     return next(e);
@@ -277,24 +320,30 @@ const compatibleUsers = async (req: Request, res: Response, next: NextFunction) 
           apoc.coll.intersection(u_interests, u2_interests) AS common_interests,
           toFloat(size(apoc.coll.intersection(u_interests, u2_interests))) / toFloat(size(u_interests)) AS u_similarity,
           toFloat(size(apoc.coll.intersection(u_interests, u2_interests))) / toFloat(size(u2_interests)) AS u2_similarity
-      RETURN DISTINCT u2.username as username, u2.age as age, u2.latitude as latitude, 
+      RETURN DISTINCT u2.username as username, u2.email as email, u2.age as age, u2.gender as gender, u2.latitude as latitude, 
                       u2.longitude as longitude, u2.photoURL as photoURL, 
                       toInteger(((u_similarity + u2_similarity) / 2) * 100) AS match_percentage
       ORDER BY match_percentage DESC
       SKIP 10 LIMIT 10
     
     `;
-
+    
     const result = await session.run(query);
-    const resultList = result.records.map(record => ({
-      username: record.get('username'),
-      age: record.get('age').toNumber(),
-      photoURL: record.get('photoURL'),
-      latitude: record.get('latitude'),
-      longitude: record.get('longitude'),
-      compatibiltiy: record.get('match_percentage').toNumber()
-    }));
-    return res.status(200).json({ status: 200, data: resultList });
+    if (result.records.length > 0) {
+      const resultList = result.records.map(record => ({
+        username: record.get('username'),
+        email: record.get('email'),
+        age: record.get('age').toNumber(),
+        gender: record.get('gender'),
+        photoURL: record.get('photoURL'),
+        latitude: record.get('latitude'),
+        longitude: record.get('longitude'),
+        compatibility:record.get('match_percentage').toNumber()
+      }));
+      return res.status(200).json({ status: 200, resultList});
+    } else {
+      return res.status(409).json({ status: 409, data: "No match found. You are one of your kind!" });
+    }
   } catch (e) {
     debugError(e.toString());
     return next(e);
@@ -322,6 +371,7 @@ const createSkills = async (req: Request, res: Response, next: NextFunction) => 
     return next(e);
   }
 };
+
 
 const createInterests = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -352,8 +402,8 @@ module.exports = {
   createUser,
   deleteUser,
   recommendUser,
-  createSkills,
+  // createSkills,
   createInterests,
   locRecommend,
   compatibleUsers,
-};
+}; 

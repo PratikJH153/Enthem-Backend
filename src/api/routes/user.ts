@@ -17,7 +17,7 @@ export default (app: Router) => {
 
     //* POST CALLS
     route.post('/', checkAuth, userController.createUser);
-    route.post('/createSkills', checkAuth, userController.createSkills);
+    // route.post('/createSkills', checkAuth, userController.createSkills);
     route.post('/createInterests', checkAuth, userController.createInterests);
 
     //* PUT CALLS
