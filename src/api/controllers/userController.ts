@@ -400,6 +400,7 @@ const createSkills = async (req: Request, res: Response, next: NextFunction) => 
 const createInterests = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const interests = req.body.interests.map(interest => `"${interest}"`).join(', ');
+    console.log(interests);
     const query = `
       WITH [${interests}] AS interestsList
       UNWIND interestsList AS interest
@@ -433,10 +434,9 @@ const interestsUser = async (req: Request, res: Response, next: NextFunction) =>
     `;
     const result2 = await session.run(query2);
     if (result2.records.length > 0) {
-      const interests = result2.records.map(record => record.get('interest'));
-      return res.status(200).json({ status: 200, interests });
+      return res.status(200).json({ status: 200, data: true });
     } else {
-      return res.status(409).json({ status: 409, message: "Please select interests for better engagement!" });
+      return res.status(404).json({ status: 404, data: false });
     }
   } catch (e) {
     debugError(e.toString());
