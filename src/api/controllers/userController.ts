@@ -69,12 +69,12 @@ const getUserBySessionId = async (req: Request, res: Response, next: NextFunctio
           age: record.get('age').toNumber(),
           gender: record.get('gender'),
           photoURL: record.get('photoURL'),
-          latitude: record.get('latitude').toNumber(),
-          longitude: record.get('longitude').toNumber(),
+          latitude: record.get('latitude'),
+          longitude: record.get('longitude'),
       };
       return res.status(200).json({ status: 200, data });
     } else {
-      return res.status(409).json({ status: 409, data: "Sorry, No User Exists with this ID !" });
+      return res.status(404).json({ status: 404, data: "Sorry, No User Exists with this ID !" });
     }
   } catch (e) {
     debugError(e.toString());
@@ -141,7 +141,7 @@ const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
       }));
       return res.status(200).json({ status: 200, resultList});
     } else {
-      return res.status(409).json({ status: 409, data: "Sorry, No User yet on Enthem" });
+      return res.status(404).json({ status: 404, data: "Sorry, No User yet on Enthem" });
     }
   } catch (e) {
     debugError(e.toString());
@@ -273,7 +273,7 @@ const locRecommend = async (req: Request, res: Response, next: NextFunction) => 
       }));
       return res.status(200).json({ status: 200, resultList});
     } else {
-      return res.status(409).json({ status: 409, data: "Sorry, No User match found nearby on Enthem, to Recommend!" });
+      return res.status(404).json({ status: 404, data: [] });
     }
   } catch (e) {
     debugError(e.toString());
@@ -316,7 +316,7 @@ const recommendUser = async (req: Request, res: Response, next: NextFunction) =>
       }));
       return res.status(200).json({ status: 200, resultList});
     } else {
-      return res.status(409).json({ status: 409, data: "Sorry, No User match found nearby on Enthem, to Recommend!" });
+      return res.status(404).json({ status: 404, data: [] });
     }
   } catch (e) {
     debugError(e.toString());
@@ -328,6 +328,11 @@ const recommendUser = async (req: Request, res: Response, next: NextFunction) =>
 
 const compatibleUsers = async (req: Request, res: Response, next: NextFunction) => {
   try {
+    
+    const max: number = +req.query.max || 10;
+    const offset: number = +req.query.offset || 0;
+    const skip: number = offset * max;
+
     const query = `
 
       MATCH (u:User)-[:HAS_INTEREST]->(s:Activity)<-[:HAS_INTEREST]-(u2:User)
@@ -344,7 +349,7 @@ const compatibleUsers = async (req: Request, res: Response, next: NextFunction) 
                       u2.longitude as longitude, u2.photoURL as photoURL, 
                       toInteger(((u_similarity + u2_similarity) / 2) * 100) AS match_percentage
       ORDER BY match_percentage DESC
-      SKIP 10 LIMIT 10
+      SKIP ${skip} LIMIT ${max}
     
     `;
     
@@ -362,14 +367,13 @@ const compatibleUsers = async (req: Request, res: Response, next: NextFunction) 
       }));
       return res.status(200).json({ status: 200, resultList});
     } else {
-      return res.status(409).json({ status: 409, data: "No match found. You are one of your kind!" });
+      return res.status(404).json({ status: 404, data: [] });
     }
   } catch (e) {
     debugError(e.toString());
     return next(e);
   }
 };
-
 
 
 const createSkills = async (req: Request, res: Response, next: NextFunction) => {
@@ -423,7 +427,6 @@ module.exports = {
   createUser,
   deleteUser,
   recommendUser,
-  // createSkills,
   createInterests,
   locRecommend,
   compatibleUsers,
