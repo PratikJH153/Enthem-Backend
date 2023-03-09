@@ -36,7 +36,7 @@ const updateUser = async (req: Request, res: Response, next: NextFunction) => {
     const result = await session.run(updateQuery, { id, ...params });
     const resultList = result.records.map(record => ({
       username: record.get('username'),
-      age: record.get('age'),
+      age: record.get('age').toNumber(),
       gender:record.get('gender'),
       photoURL: record.get('photoURL'),
       latitude: record.get('latitude'),
@@ -69,8 +69,8 @@ const getUserBySessionId = async (req: Request, res: Response, next: NextFunctio
           age: record.get('age').toNumber(),
           gender: record.get('gender'),
           photoURL: record.get('photoURL'),
-          latitude: record.get('latitude').toNumber(),
-          longitude: record.get('longitude').toNumber(),
+          latitude: record.get('latitude'),
+          longitude: record.get('longitude')
       };
       return res.status(200).json({ status: 200, data });
     } else {
@@ -358,7 +358,7 @@ const createSkills = async (req: Request, res: Response, next: NextFunction) => 
     const query = `
       WITH [${skills}] AS skillsList
       UNWIND skillsList AS skill
-      MERGE (s:Activity {username:skill})
+      MERGE (s:Activity {name:skill})
       WITH s
       MATCH (u:User {id:"${req.body.id}"})
       MERGE (u)-[:HAS_SKILL]->(s)
@@ -379,7 +379,7 @@ const createInterests = async (req: Request, res: Response, next: NextFunction) 
     const query = `
       WITH [${interests}] AS interestsList
       UNWIND interestsList AS interest
-      MERGE (s:Activity {username:interest})
+      MERGE (s:Activity {name:interest})
       WITH s
       MATCH (u:User {id:"${req.body.id}"})
       MERGE (u)-[:HAS_INTEREST]->(s)
@@ -392,6 +392,35 @@ const createInterests = async (req: Request, res: Response, next: NextFunction) 
     return next(e);
   }
 };
+
+const interestsUser = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const query1 = `
+      MATCH (n:User{id:"${req.body.id}"})
+      RETURN n.id AS id
+    `;
+    const result1 = await session.run(query1);
+    if (result1.records.length === 0) {
+      return res.status(404).json({ status: 404, message: "Sorry, no user with the given ID exists." });
+    }
+    const query2 = `
+      MATCH (n:User{id:"${req.body.id}"})-[r:HAS_INTEREST]->(n2:Activity)
+      RETURN DISTINCT n2.name AS interest
+    `;
+    const result2 = await session.run(query2);
+    if (result2.records.length > 0) {
+      const interests = result2.records.map(record => record.get('interest'));
+      return res.status(200).json({ status: 200, interests });
+    } else {
+      return res.status(409).json({ status: 409, message: "Please select interests for better engagement!" });
+    }
+  } catch (e) {
+    debugError(e.toString());
+    return next(e);
+  }
+};
+
+
 
 
 module.exports = {
@@ -406,4 +435,5 @@ module.exports = {
   createInterests,
   locRecommend,
   compatibleUsers,
+  interestsUser,
 }; 
