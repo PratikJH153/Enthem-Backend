@@ -11,12 +11,15 @@ export default (app: Router) => {
     route.get('/all', checkAuth, userController.getAllUsers);
     route.get('/', checkAuth, userController.getUserBySessionId);
     route.get('/exists', checkAuth, userController.isUserExists);
+    route.get('/usernameexists', checkAuth, userController.isUsernameExists);
     route.get('/recommend', checkAuth, userController.recommendUser);
     route.get('/locRecommend',checkAuth,userController.locRecommend);
+    route.get('/compatibleUsers',checkAuth,userController.compatibleUsers);
+    route.get('/interests',checkAuth,userController.interestsUser);
 
     //* POST CALLS
     route.post('/', checkAuth, userController.createUser);
-    route.post('/createSkills', checkAuth, userController.createSkills);
+    // route.post('/createSkills', checkAuth, userController.createSkills);
     route.post('/createInterests', checkAuth, userController.createInterests);
 
     //* PUT CALLS
