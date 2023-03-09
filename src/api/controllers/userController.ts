@@ -10,7 +10,6 @@ const db = driver(config.databaseURL, auth.basic(config.dbUser, config.dbPass),
 
 const session = db.session({ database: "neo4j" });
 
-
 const updateUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id, ...params } = req.body;
@@ -50,7 +49,6 @@ const updateUser = async (req: Request, res: Response, next: NextFunction) => {
 };
 
 
-
 const getUserBySessionId = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const query = `
@@ -82,6 +80,7 @@ const getUserBySessionId = async (req: Request, res: Response, next: NextFunctio
   }
 };
 
+
 const isUserExists = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const query = `
@@ -100,9 +99,9 @@ const isUserExists = async (req: Request, res: Response, next: NextFunction) => 
   }
 };
 
+
 const isUsernameExists = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    console.log(req.body.username);
     const query = `
       MATCH (n:User {name:"${req.body.username}"})
       RETURN n.id AS id;
@@ -118,6 +117,7 @@ const isUsernameExists = async (req: Request, res: Response, next: NextFunction)
     return next(e);
   }
 };
+
 
 const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -158,10 +158,8 @@ const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
 };
 
 
-
 const createUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
-
     const userInput = req.body;
 
     // Check if all required properties are present
@@ -219,7 +217,6 @@ const createUser = async (req: Request, res: Response, next: NextFunction) => {
 };
 
 
-
 const deleteUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const query = `
@@ -243,12 +240,8 @@ const deleteUser = async (req: Request, res: Response, next: NextFunction) => {
 };
 
 
-
-
 const locRecommend = async (req: Request, res: Response, next: NextFunction) => {
-  
   try {
-
     const max: number = +req.query.max || 10;
     const offset: number = +req.query.offset || 0;
     const skip: number = offset * max;
@@ -298,8 +291,6 @@ const locRecommend = async (req: Request, res: Response, next: NextFunction) => 
 
 const recommendUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
-
-    
     const max: number = +req.query.max || 10;
     const offset: number = +req.query.offset || 0;
     const skip: number = offset * max;
@@ -348,10 +339,8 @@ const recommendUser = async (req: Request, res: Response, next: NextFunction) =>
 };
 
 
-
 const compatibleUsers = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    
     const max: number = +req.query.max || 10;
     const offset: number = +req.query.offset || 0;
     const skip: number = offset * max;
@@ -443,6 +432,7 @@ const createInterests = async (req: Request, res: Response, next: NextFunction) 
   }
 };
 
+
 const interestsUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const query1 = `
@@ -468,9 +458,6 @@ const interestsUser = async (req: Request, res: Response, next: NextFunction) =>
     return next(e);
   }
 };
-
-
-
 
 module.exports = {
   updateUser,
