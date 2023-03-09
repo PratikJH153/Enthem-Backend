@@ -246,7 +246,13 @@ const deleteUser = async (req: Request, res: Response, next: NextFunction) => {
 
 
 const locRecommend = async (req: Request, res: Response, next: NextFunction) => {
+  
   try {
+
+    const max: number = +req.query.max || 10;
+    const offset: number = +req.query.offset || 0;
+    const skip: number = offset * max;
+
     const query = `
       MATCH (u:User)
       WHERE u.id = "${req.body.id}" 
@@ -261,8 +267,10 @@ const locRecommend = async (req: Request, res: Response, next: NextFunction) => 
           toFloat(u2.longitude) * pi() / 180.0 AS lon2,
           3959.0 AS r
       WITH u, u2, r * asin(sqrt(sin((lat2 - lat1) / 2)^2 + cos(lat1) * cos(lat2) * sin((lon2 - lon1) / 2)^2)) * 2.0 AS distance
-      WHERE distance <= 100
-      RETURN DISTINCT u2.username as username, u2.email as email, u2.gender as gender, u2.age as age, u2.latitude as latitude, u2.longitude as longitude, u2.photoURL as photoURL 
+      WHERE distance <= 10000
+      RETURN DISTINCT u2.username as username, u2.email as email, u2.gender as gender, 
+      u2.age as age, u2.latitude as latitude, u2.longitude as longitude, u2.photoURL as photoURL 
+      SKIP ${skip} LIMIT ${max}
     
     `;
 
@@ -284,14 +292,20 @@ const locRecommend = async (req: Request, res: Response, next: NextFunction) => 
   } catch (e) {
     debugError(e.toString());
     return next(e);
-  }
+  } 
 };
 
 
 const recommendUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
+
+    
+    const max: number = +req.query.max || 10;
+    const offset: number = +req.query.offset || 0;
+    const skip: number = offset * max;
+
     const query = `
-      MATCH (u:User)-[:HAS_SKILL]->(s:Activity)<-[:HAS_SKILL]-(u2:User)
+      MATCH (u:User)-[:HAS_INTEREST]->(s:Activity)<-[:HAS_INTEREST]-(u2:User)
       WHERE u.id = "${req.body.id}"
       AND u.latitude IS NOT NULL AND u.longitude IS NOT NULL 
       AND u2.id <> u.id 
@@ -305,10 +319,12 @@ const recommendUser = async (req: Request, res: Response, next: NextFunction) =>
           cos(lat1) AS c,
           cos(lat2) AS d
       WITH u, u2, s, r * asin(sqrt(a^2 + c * d * b^2)) AS distance
-      WHERE distance <=100
-      RETURN DISTINCT u2.username as username, u2.email as email, u2.gender as gender, u2.age as age, u2.latitude as latitude, u2.longitude as longitude, u2.photoURL as photoURL
+      WHERE distance <=10000
+      RETURN DISTINCT u2.username as username, u2.email as email, 
+      u2.gender as gender, u2.age as age, u2.latitude as latitude, u2.longitude as longitude, u2.photoURL as photoURL
+      SKIP ${skip} LIMIT ${max}
     `;
-
+  
     const result = await session.run(query);
     if (result.records.length > 0) {
       const resultList = result.records.map(record => ({
@@ -328,6 +344,7 @@ const recommendUser = async (req: Request, res: Response, next: NextFunction) =>
     debugError(e.toString());
     return next(e);
   }
+  
 };
 
 
