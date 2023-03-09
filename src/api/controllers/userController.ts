@@ -10,7 +10,6 @@ const db = driver(config.databaseURL, auth.basic(config.dbUser, config.dbPass),
 
 const session = db.session({ database: "neo4j" });
 
-
 const updateUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id, ...params } = req.body;
@@ -50,7 +49,6 @@ const updateUser = async (req: Request, res: Response, next: NextFunction) => {
 };
 
 
-
 const getUserBySessionId = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const query = `
@@ -82,6 +80,7 @@ const getUserBySessionId = async (req: Request, res: Response, next: NextFunctio
   }
 };
 
+
 const isUserExists = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const query = `
@@ -100,9 +99,9 @@ const isUserExists = async (req: Request, res: Response, next: NextFunction) => 
   }
 };
 
+
 const isUsernameExists = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    console.log(req.body.username);
     const query = `
       MATCH (n:User {name:"${req.body.username}"})
       RETURN n.id AS id;
@@ -119,15 +118,23 @@ const isUsernameExists = async (req: Request, res: Response, next: NextFunction)
   }
 };
 
+
 const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const page = +req.query.page || 1;
+    const pageSize = +req.query.pageSize || 10;
+    const skip = (page - 1) * pageSize;
+  
     const query = `
       MATCH (n:User)
       RETURN n.id AS id, n.username AS username, n.email AS email, n.age AS age,
         n.gender AS gender, n.photoURL AS photoURL,
-        n.latitude AS latitude, n.longitude AS longitude;
+        n.latitude AS latitude, n.longitude AS longitude
+      SKIP ${skip} LIMIT ${pageSize};
     `;
+    
     const result = await session.run(query);
+  
     if (result.records.length > 0) {
       const resultList = result.records.map(record => ({
         id: record.get('id'),
@@ -139,7 +146,7 @@ const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
         latitude: record.get('latitude'),
         longitude: record.get('longitude')
       }));
-      return res.status(200).json({ status: 200, resultList});
+      return res.status(200).json({ status: 200, resultList });
     } else {
       return res.status(404).json({ status: 404, data: "Sorry, No User yet on Enthem" });
     }
@@ -147,13 +154,12 @@ const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
     debugError(e.toString());
     return next(e);
   }
+  
 };
-
 
 
 const createUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
-
     const userInput = req.body;
 
     // Check if all required properties are present
@@ -211,9 +217,6 @@ const createUser = async (req: Request, res: Response, next: NextFunction) => {
 };
 
 
-
-
-
 const deleteUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const query = `
@@ -237,10 +240,12 @@ const deleteUser = async (req: Request, res: Response, next: NextFunction) => {
 };
 
 
-
-
 const locRecommend = async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const max: number = +req.query.max || 10;
+    const offset: number = +req.query.offset || 0;
+    const skip: number = offset * max;
+
     const query = `
       MATCH (u:User)
       WHERE u.id = "${req.body.id}" 
@@ -255,8 +260,10 @@ const locRecommend = async (req: Request, res: Response, next: NextFunction) => 
           toFloat(u2.longitude) * pi() / 180.0 AS lon2,
           3959.0 AS r
       WITH u, u2, r * asin(sqrt(sin((lat2 - lat1) / 2)^2 + cos(lat1) * cos(lat2) * sin((lon2 - lon1) / 2)^2)) * 2.0 AS distance
-      WHERE distance <= 100
-      RETURN DISTINCT u2.username as username, u2.email as email, u2.gender as gender, u2.age as age, u2.latitude as latitude, u2.longitude as longitude, u2.photoURL as photoURL 
+      WHERE distance <= 10000
+      RETURN DISTINCT u2.username as username, u2.email as email, u2.gender as gender, 
+      u2.age as age, u2.latitude as latitude, u2.longitude as longitude, u2.photoURL as photoURL 
+      SKIP ${skip} LIMIT ${max}
     
     `;
 
@@ -278,14 +285,18 @@ const locRecommend = async (req: Request, res: Response, next: NextFunction) => 
   } catch (e) {
     debugError(e.toString());
     return next(e);
-  }
+  } 
 };
 
 
 const recommendUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const max: number = +req.query.max || 10;
+    const offset: number = +req.query.offset || 0;
+    const skip: number = offset * max;
+
     const query = `
-      MATCH (u:User)-[:HAS_SKILL]->(s:Activity)<-[:HAS_SKILL]-(u2:User)
+      MATCH (u:User)-[:HAS_INTEREST]->(s:Activity)<-[:HAS_INTEREST]-(u2:User)
       WHERE u.id = "${req.body.id}"
       AND u.latitude IS NOT NULL AND u.longitude IS NOT NULL 
       AND u2.id <> u.id 
@@ -299,10 +310,12 @@ const recommendUser = async (req: Request, res: Response, next: NextFunction) =>
           cos(lat1) AS c,
           cos(lat2) AS d
       WITH u, u2, s, r * asin(sqrt(a^2 + c * d * b^2)) AS distance
-      WHERE distance <=100
-      RETURN DISTINCT u2.username as username, u2.email as email, u2.gender as gender, u2.age as age, u2.latitude as latitude, u2.longitude as longitude, u2.photoURL as photoURL
+      WHERE distance <=10000
+      RETURN DISTINCT u2.username as username, u2.email as email, 
+      u2.gender as gender, u2.age as age, u2.latitude as latitude, u2.longitude as longitude, u2.photoURL as photoURL
+      SKIP ${skip} LIMIT ${max}
     `;
-
+  
     const result = await session.run(query);
     if (result.records.length > 0) {
       const resultList = result.records.map(record => ({
@@ -322,32 +335,34 @@ const recommendUser = async (req: Request, res: Response, next: NextFunction) =>
     debugError(e.toString());
     return next(e);
   }
+  
 };
-
 
 
 const compatibleUsers = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    
     const max: number = +req.query.max || 10;
     const offset: number = +req.query.offset || 0;
     const skip: number = offset * max;
 
     const query = `
-
-      MATCH (u:User)-[:HAS_INTEREST]->(s:Activity)<-[:HAS_INTEREST]-(u2:User)
+      MATCH (u:User)-[:HAS_INTEREST]->(s:Activity)
       WHERE u.id = "${req.body.id}"
-      AND u2.id <> u.id 
+      WITH u, COLLECT(s) AS interests
+      MATCH (u2:User)-[:HAS_INTEREST]->(s2:Activity)
+      WHERE u2.id <> u.id
+      WITH u, u2, interests, COLLECT(s2) AS interests2
       WITH u, u2, 
-          [(u)-[:HAS_INTEREST]->(i:Activity) | i.username] AS u_interests,
-          [(u2)-[:HAS_INTEREST]->(i:Activity) | i.username] AS u2_interests
-      WITH u, u2, 
-          apoc.coll.intersection(u_interests, u2_interests) AS common_interests,
-          toFloat(size(apoc.coll.intersection(u_interests, u2_interests))) / toFloat(size(u_interests)) AS u_similarity,
-          toFloat(size(apoc.coll.intersection(u_interests, u2_interests))) / toFloat(size(u2_interests)) AS u2_similarity
-      RETURN DISTINCT u2.username as username, u2.email as email, u2.age as age, u2.gender as gender, u2.latitude as latitude, 
-                      u2.longitude as longitude, u2.photoURL as photoURL, 
-                      toInteger(((u_similarity + u2_similarity) / 2) * 100) AS match_percentage
+          REDUCE(s = [], x IN interests | 
+                  s + CASE WHEN x IN interests2 THEN x ELSE [] END) AS common_interests,
+          toFloat(size(REDUCE(s = [], x IN interests | s + x))) AS u_interests,
+          toFloat(size(interests2)) AS u2_interests
+      WITH u, u2, common_interests,
+          toFloat(size(common_interests)) / u_interests AS u_similarity,
+          toFloat(size(common_interests)) / u2_interests AS u2_similarity
+      RETURN u2.username AS username, u2.email AS email, u2.age AS age, u2.gender AS gender, u2.latitude AS latitude, 
+            u2.longitude AS longitude, u2.photoURL AS photoURL, 
+            toInteger(((u_similarity + u2_similarity) / 2) * 100) AS match_percentage
       ORDER BY match_percentage DESC
       SKIP ${skip} LIMIT ${max}
     
@@ -418,6 +433,7 @@ const createInterests = async (req: Request, res: Response, next: NextFunction) 
   }
 };
 
+
 const interestsUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const query1 = `
@@ -443,9 +459,6 @@ const interestsUser = async (req: Request, res: Response, next: NextFunction) =>
     return next(e);
   }
 };
-
-
-
 
 module.exports = {
   updateUser,
