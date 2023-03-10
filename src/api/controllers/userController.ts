@@ -169,9 +169,10 @@ const createUser = async (req: Request, res: Response, next: NextFunction) => {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
+
     const checkEmailQuery = `
       MATCH (u:User)
-      WHERE u.email = "${userInput.email}" OR u.id = "${userInput.id}"
+      WHERE u.email = "${userInput.email}" OR u.id = "${userInput.id}" OR u.username="${userInput.username.toLowerCase()}"
       RETURN DISTINCT u.username as username, u.email as email, u.age as age, u.gender as gender, u.photoURL as photoURL
     `;
     const emailResult = await session.run(checkEmailQuery);
@@ -193,7 +194,7 @@ const createUser = async (req: Request, res: Response, next: NextFunction) => {
     const createQuery = `
       CREATE (u:User {
         id: "${userInput.id}",
-        username: "${userInput.username}",
+        username: "${userInput.username.toLowerCase()}",
         email: "${userInput.email}",
         photoURL: "${userInput.photoURL}",
         gender: COALESCE("${userInput.gender}", "Unknown"),
