@@ -428,13 +428,13 @@ const createInterests = async (req: Request, res: Response, next: NextFunction) 
   try {
     const interests = req.body.interests.map(interest => `"${interest}"`).join(', ');
     const query = `
-      WITH [${interests}] AS interestsList
-      UNWIND interestsList AS interest
-      MERGE (s:Activity {name:interest})
-      WITH s
-      MATCH (u:User {id:"${req.body.id}"})
-      MERGE (u)-[:HAS_INTEREST]->(s)
-    `;
+
+      MATCH (u:User {id: "${req.body.id}"})
+      UNWIND ${interests} AS interestName
+      MATCH (i:Activity {name: interestName})
+      MERGE (u)-[:HAS_INTEREST]->(i)
+
+      `;
 
     const result = await session.run(query);
     return res.status(201).json({ status: 201, data: "Done creating Interests" });
