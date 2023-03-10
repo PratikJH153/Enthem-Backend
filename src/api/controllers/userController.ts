@@ -121,16 +121,17 @@ const isUsernameExists = async (req: Request, res: Response, next: NextFunction)
 
 const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const page = +req.query.page || 1;
-    const pageSize = +req.query.pageSize || 10;
-    const skip = (page - 1) * pageSize;
-  
+
+    const max: number = +req.query.max || 10;
+    const offset: number = +req.query.offset || 0;
+    const skip: number = offset * max;
+
     const query = `
-      MATCH (n:User)
-      RETURN n.id AS id, n.username AS username, n.email AS email, n.age AS age,
+        MATCH (n:User)
+        RETURN n.id AS id, n.username AS username, n.email AS email, n.age AS age,
         n.gender AS gender, n.photoURL AS photoURL,
         n.latitude AS latitude, n.longitude AS longitude
-      SKIP ${skip} LIMIT ${pageSize};
+        SKIP ${skip} LIMIT ${max}
     `;
     
     const result = await session.run(query);
