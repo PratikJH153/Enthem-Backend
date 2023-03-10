@@ -197,7 +197,7 @@ const createUser = async (req: Request, res: Response, next: NextFunction) => {
         username: "${userInput.username.toLowerCase()}",
         email: "${userInput.email}",
         photoURL: "${userInput.photoURL}",
-        gender: COALESCE("${userInput.gender}", "Unknown"),
+        gender: COALESCE("${userInput.gender.toLowerCase()}", "Unknown"),
         age: COALESCE(${userInput.age}, 20),
         latitude: ${userInput.latitude},
         longitude: ${userInput.longitude}
@@ -311,19 +311,18 @@ const recommendUser = async (req: Request, res: Response, next: NextFunction) =>
       AND u.latitude IS NOT NULL AND u.longitude IS NOT NULL 
       AND u2.id <> u.id 
       AND u2.latitude IS NOT NULL AND u2.longitude IS NOT NULL 
-      WITH u, u2, s, u.latitude * pi() / 180 AS lat1, u.longitude * pi() / 180 AS lon1,
-          u2.latitude * pi() / 180 AS lat2, u2.longitude * pi() / 180 AS lon2,
-          6371 * 2 AS r 
-      WITH u, u2, s, lat1, lon1, lat2, lon2, r,
-          sin((lat2 - lat1) / 2) AS a,
-          sin((lon2 - lon1) / 2) AS b,
-          cos(lat1) AS c,
-          cos(lat2) AS d
-      WITH u, u2, s, r * asin(sqrt(a^2 + c * d * b^2)) AS distance
-      WHERE distance <=10000
+      WITH u, u2, s,
+          point({latitude: u.latitude, longitude: u.longitude}) AS p1,
+          point({latitude: u2.latitude, longitude: u2.longitude}) AS p2
+      WITH u, u2, s, p1, p2, 2 * 3959 * asin(sqrt(haversin(radians(p2.latitude - p1.latitude)) + 
+      cos(radians(p1.latitude)) * cos(radians(p2.latitude)) * haversin(radians(p2.longitude - p1.longitude)))) AS distance
+      WHERE distance <= 1000
       RETURN DISTINCT u2.username as username, u2.email as email, 
-      u2.gender as gender, u2.age as age, u2.latitude as latitude, u2.longitude as longitude, u2.photoURL as photoURL
+            u2.gender as gender, u2.age as age, 
+            u2.latitude as latitude, u2.longitude as longitude, 
+            u2.photoURL as photoURL
       SKIP ${skip} LIMIT ${max}
+    
     `;
   
     const result = await session.run(query);
