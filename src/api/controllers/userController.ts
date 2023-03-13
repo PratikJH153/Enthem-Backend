@@ -167,10 +167,9 @@ const createUser = async (req: Request, res: Response, next: NextFunction) => {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
-
     const checkEmailQuery = `
       MATCH (u:User)
-      WHERE u.email = "${userInput.email}" OR u.id = "${userInput.id}" OR u.username="${userInput.username.toLowerCase()}"
+      WHERE u.email = "${userInput.email}" OR u.id = "${userInput.id}"
       RETURN DISTINCT u.username as username, u.email as email, u.age as age, u.gender as gender, u.photoURL as photoURL
     `;
     const emailResult = await session.run(checkEmailQuery);
@@ -192,10 +191,10 @@ const createUser = async (req: Request, res: Response, next: NextFunction) => {
     const createQuery = `
       CREATE (u:User {
         id: "${userInput.id}",
-        username: "${userInput.username.toLowerCase()}",
+        username: "${userInput.username}",
         email: "${userInput.email}",
         photoURL: "${userInput.photoURL}",
-        gender: COALESCE("${userInput.gender.toLowerCase()}", "Unknown"),
+        gender: COALESCE("${userInput.gender}", "Unknown"),
         age: COALESCE(${userInput.age}, 20),
         latitude: ${userInput.latitude},
         longitude: ${userInput.longitude}
@@ -302,18 +301,19 @@ const recommendUser = async (req: Request, res: Response, next: NextFunction) =>
       AND u.latitude IS NOT NULL AND u.longitude IS NOT NULL 
       AND u2.id <> u.id 
       AND u2.latitude IS NOT NULL AND u2.longitude IS NOT NULL 
-      WITH u, u2, s,
-          point({latitude: u.latitude, longitude: u.longitude}) AS p1,
-          point({latitude: u2.latitude, longitude: u2.longitude}) AS p2
-      WITH u, u2, s, p1, p2, 2 * 3959 * asin(sqrt(haversin(radians(p2.latitude - p1.latitude)) + 
-      cos(radians(p1.latitude)) * cos(radians(p2.latitude)) * haversin(radians(p2.longitude - p1.longitude)))) AS distance
-      WHERE distance <= 1000
+      WITH u, u2, s, u.latitude * pi() / 180 AS lat1, u.longitude * pi() / 180 AS lon1,
+          u2.latitude * pi() / 180 AS lat2, u2.longitude * pi() / 180 AS lon2,
+          6371 * 2 AS r 
+      WITH u, u2, s, lat1, lon1, lat2, lon2, r,
+          sin((lat2 - lat1) / 2) AS a,
+          sin((lon2 - lon1) / 2) AS b,
+          cos(lat1) AS c,
+          cos(lat2) AS d
+      WITH u, u2, s, r * asin(sqrt(a^2 + c * d * b^2)) AS distance
+      WHERE distance <=10000
       RETURN DISTINCT u2.username as username, u2.email as email, 
-            u2.gender as gender, u2.age as age, 
-            u2.latitude as latitude, u2.longitude as longitude, 
-            u2.photoURL as photoURL
+      u2.gender as gender, u2.age as age, u2.latitude as latitude, u2.longitude as longitude, u2.photoURL as photoURL
       SKIP ${skip} LIMIT ${max}
-    
     `;
   
     const result = await session.run(query);
@@ -335,9 +335,8 @@ const recommendUser = async (req: Request, res: Response, next: NextFunction) =>
     debugError(e.toString());
     return next(e);
   }
-  
-};
 
+};
 
 const compatibleUsers = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -346,25 +345,34 @@ const compatibleUsers = async (req: Request, res: Response, next: NextFunction) 
     const skip: number = offset * max;
 
     const query = `
+
       MATCH (u:User)-[:HAS_INTEREST]->(s:Activity)
       WHERE u.id = "${req.body.id}"
       WITH u, COLLECT(s) AS interests
       MATCH (u2:User)-[:HAS_INTEREST]->(s2:Activity)
       WHERE u2.id <> u.id
-      WITH u, u2, interests, COLLECT(s2) AS interests2
+      WITH u, u2, interests, COLLECT(s2) AS interests2,
+        radians(u.latitude) AS u_lat, radians(u.longitude) AS u_lon,
+        radians(u2.latitude) AS u2_lat, radians(u2.longitude) AS u2_lon
       WITH u, u2, 
-          REDUCE(s = [], x IN interests | 
-                  s + CASE WHEN x IN interests2 THEN x ELSE [] END) AS common_interests,
-          toFloat(size(REDUCE(s = [], x IN interests | s + x))) AS u_interests,
-          toFloat(size(interests2)) AS u2_interests
+        REDUCE(s = [], x IN interests | 
+                s + CASE WHEN x IN interests2 THEN x ELSE [] END) AS common_interests,
+        toFloat(size(REDUCE(s = [], x IN interests | s + x))) AS u_interests,
+        toFloat(size(interests2)) AS u2_interests,
+        u_lat, u_lon, u2_lat, u2_lon
       WITH u, u2, common_interests,
-          toFloat(size(common_interests)) / u_interests AS u_similarity,
-          toFloat(size(common_interests)) / u2_interests AS u2_similarity
+        toFloat(size(common_interests)) / u_interests AS u_similarity,
+        toFloat(size(common_interests)) / u2_interests AS u2_similarity,
+        round(6371 * acos(sin(u_lat) * sin(u2_lat) + cos(u_lat) * cos(u2_lat) * cos(u2_lon - u_lon)) * 0.621371, 2) AS distance_in_miles
       RETURN u2.username AS username, u2.email AS email, u2.age AS age, u2.gender AS gender, u2.latitude AS latitude, 
-            u2.longitude AS longitude, u2.photoURL AS photoURL, 
-            toInteger(((u_similarity + u2_similarity) / 2) * 100) AS match_percentage
+        u2.longitude AS longitude, u2.photoURL AS photoURL, 
+        toInteger(((u_similarity + u2_similarity) / 2) * 100) AS match_percentage,
+        distance_in_miles
       ORDER BY match_percentage DESC
       SKIP ${skip} LIMIT ${max}
+    
+
+        
     
     `;
     
@@ -378,6 +386,7 @@ const compatibleUsers = async (req: Request, res: Response, next: NextFunction) 
         photoURL: record.get('photoURL'),
         latitude: record.get('latitude'),
         longitude: record.get('longitude'),
+        distance:record.get('distance_in_miles'),
         compatibility:record.get('match_percentage').toNumber()
       }));
       return res.status(200).json({ status: 200, resultList});
@@ -415,6 +424,7 @@ const createSkills = async (req: Request, res: Response, next: NextFunction) => 
 const createInterests = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const interests = req.body.interests.map(interest => `"${interest}"`).join(', ');
+    console.log(interests);
     const query = `
       WITH [${interests}] AS interestsList
       UNWIND interestsList AS interest
