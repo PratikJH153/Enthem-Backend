@@ -1,13 +1,15 @@
-// import { ITest } from '../../interfaces/ITest';
+import { Document, Model } from 'mongoose';
+import { IRoom } from '../../interfaces/IRoom';
 
-// declare global {
-//   namespace Express {
-//     export interface Request {
-//       currentUser: IUser & Document; 
-//     }    
-//   }
+declare global {
+  namespace Express {
+    export interface Request {
+      currentUser: IUser & Document; 
+    }    
+  }
 
-//   namespace Models {
-//     export type TestModel = Model<ITest>;
-// }
-// }
+  namespace Models {
+    export type TestModel = Model<ITest & Document>;
+    export type RoomModel = Model<IRoom & Document>;
+   }
+}

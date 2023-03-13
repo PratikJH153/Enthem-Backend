@@ -121,35 +121,32 @@ const isUsernameExists = async (req: Request, res: Response, next: NextFunction)
 
 const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const page = +req.query.page || 1;
-    const pageSize = +req.query.pageSize || 10;
-    const skip = (page - 1) * pageSize;
+    const max: number = +req.query.max || 10;
+    const offset: number = +req.query.offset || 0;
+    const skip: number = offset * max;
   
     const query = `
       MATCH (n:User)
       RETURN n.id AS id, n.username AS username, n.email AS email, n.age AS age,
         n.gender AS gender, n.photoURL AS photoURL,
         n.latitude AS latitude, n.longitude AS longitude
-      SKIP ${skip} LIMIT ${pageSize};
+      SKIP ${skip} LIMIT ${max};
     `;
     
     const result = await session.run(query);
   
-    if (result.records.length > 0) {
-      const resultList = result.records.map(record => ({
-        id: record.get('id'),
-        username: record.get('username'),
-        email: record.get('email'),
-        age: record.get('age').toNumber(),
-        gender: record.get('gender'),
-        photoURL: record.get('photoURL'),
-        latitude: record.get('latitude'),
-        longitude: record.get('longitude')
-      }));
-      return res.status(200).json({ status: 200, resultList });
-    } else {
-      return res.status(404).json({ status: 404, data: "Sorry, No User yet on Enthem" });
-    }
+    const resultList = result.records.map(record => ({
+      id: record.get('id'),
+      username: record.get('username'),
+      email: record.get('email'),
+      age: record.get('age').toNumber(),
+      gender: record.get('gender'),
+      photoURL: record.get('photoURL'),
+      latitude: record.get('latitude'),
+      longitude: record.get('longitude')
+    }));
+    return res.status(200).json({ status: 200, data: resultList });
+  
   } catch (e) {
     debugError(e.toString());
     return next(e);
@@ -279,7 +276,7 @@ const locRecommend = async (req: Request, res: Response, next: NextFunction) => 
         latitude: record.get('latitude'),
         longitude: record.get('longitude')
       }));
-      return res.status(200).json({ status: 200, resultList});
+      return res.status(200).json({ status: 200, data: resultList});
     } else {
       return res.status(404).json({ status: 404, data: [] });
     }
@@ -327,7 +324,7 @@ const recommendUser = async (req: Request, res: Response, next: NextFunction) =>
         latitude: record.get('latitude'),
         longitude: record.get('longitude')
       }));
-      return res.status(200).json({ status: 200, resultList});
+      return res.status(200).json({ status: 200, data: resultList});
     } else {
       return res.status(404).json({ status: 404, data: [] });
     }
@@ -380,7 +377,7 @@ const compatibleUsers = async (req: Request, res: Response, next: NextFunction) 
         longitude: record.get('longitude'),
         compatibility:record.get('match_percentage').toNumber()
       }));
-      return res.status(200).json({ status: 200, resultList});
+      return res.status(200).json({ status: 200, data: resultList});
     } else {
       return res.status(404).json({ status: 404, data: [] });
     }

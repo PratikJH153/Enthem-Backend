@@ -1,8 +1,26 @@
 import expressLoader from './express';
-// import mongooseLoader from './mongoose';
+import dependencyInjectorLoader from './dependencyInjector';
+import mongooseLoader from './mongoose';
+import Logger from './logger';
 
 export default async ({ expressApp }) => {
-  expressLoader({ app: expressApp });
-  // const mongoConnection = await mongooseLoader();
+  const mongoConnection = await mongooseLoader();
   console.log("🔥🔥 Db loaded and connected! 🔥🔥");
+
+  const roomModel = {
+    name: 'roomModel',
+    model: require('../models/room').default,
+  };
+
+  const { logger } = await dependencyInjectorLoader({
+    mongoConnection,
+    models: [
+      roomModel
+    ],
+  });
+  
+  Logger.info('✌️ Dependency Injector loaded');
+
+  await expressLoader({ app: expressApp });
+  Logger.info('✌️ Express loaded');
 };
