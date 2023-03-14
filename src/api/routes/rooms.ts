@@ -9,4 +9,8 @@ export default (app: Router) => {
 
     //* GET CALLS
     route.get('/all', checkAuth, roomController.getAllRooms);
+    route.get('/', checkAuth, roomController.getAllRooms);
+
+    //* POST CALLS
+    route.post('', checkAuth, roomController.addRoom)
 };

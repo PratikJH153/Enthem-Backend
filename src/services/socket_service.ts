@@ -1,5 +1,7 @@
 import moment from "moment";
+import { Service } from "typedi";
 
+@Service()
 export default class SocketService {
   public isRealString(str): boolean {
     return typeof str === 'string' && str.trim().length > 0;

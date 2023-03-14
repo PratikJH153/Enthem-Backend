@@ -5,13 +5,12 @@ import Logger from './logger';
 
 export default async ({ expressApp }) => {
   const mongoConnection = await mongooseLoader();
-  console.log("🔥🔥 Db loaded and connected! 🔥🔥");
+  Logger.info('✌️ DB loaded and connected!');
 
   const roomModel = {
     name: 'roomModel',
     model: require('../models/room').default,
   };
-
   const { logger } = await dependencyInjectorLoader({
     mongoConnection,
     models: [

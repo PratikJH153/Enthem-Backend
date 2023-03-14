@@ -1,6 +1,5 @@
 import mongoose from 'mongoose';
 import { IRoom } from '../interfaces/IRoom';
-const Schema = mongoose.Schema;
 
 const Room = new mongoose.Schema(
   {
@@ -45,4 +44,4 @@ const Room = new mongoose.Schema(
   { timestamps: true }
 );
 
-export default mongoose.model<IRoom & mongoose.Document>('Room', Room);
+export default mongoose.model<IRoom & mongoose.Document>('roomModel', Room);

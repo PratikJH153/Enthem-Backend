@@ -7,7 +7,7 @@ import config from "../config";
 export default (app) => {
   const server = createServer(app);
   const io = new Server(server);
-  const socketService = new SocketService();
+  const socketService = Container.get(SocketService);
 
   io.on("connection", (socket) => {
     console.log("Backend Connected");
@@ -16,7 +16,6 @@ export default (app) => {
     socket.on("sendRoomID", (roomID) => {
       roomID = roomID;
       socket.join(roomID);
-      console.log("CHAT ROOM CONNECTED" + roomID);
     });
 
     socket.on('disconnect', () => {

@@ -18,6 +18,10 @@ export default ({ app }: { app: express.Application }) => {
   });
 
   app.use(cors());
+  
+  app.set("view engine", "ejs");
+
+  app.use(require('method-override')());
 
   app.use(bodyParser.urlencoded({
     extended: false
