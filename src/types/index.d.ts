@@ -4,7 +4,6 @@ import { IRoom } from '../../interfaces/IRoom';
 declare global {
   namespace Express {
     export interface Request {
-      currentUser: IUser & Document; 
     }    
   }
 
