@@ -11,6 +11,7 @@ if(process.env.NODE_ENV === 'dev'){
 
 export default {
   port: parseInt(process.env.PORT, 10),
+  socketPort: process.env.SOCKET_PORT,
 
   databaseURL: process.env.DB_HOST,
   dbUser: process.env.DB_USER,
