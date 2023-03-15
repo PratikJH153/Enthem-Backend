@@ -8,6 +8,8 @@ export default (app) => {
   const server = createServer(app);
   const io = new Server(server);
   const socketService = Container.get(SocketService);
+  
+  io.attach(+config.socketPort);
 
   io.on("connection", (socket) => {
     console.log("Backend Connected");
