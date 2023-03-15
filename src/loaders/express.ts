@@ -1,9 +1,8 @@
-import express from 'express';
+import express, {Request, Response} from 'express';
 import bodyParser from 'body-parser';
 import cors from 'cors';
 import routes from '../api';
 import config from '../config';
-import {Request, Response} from "express";
 import morgan from "morgan";
 
 export default ({ app }: { app: express.Application }) => {

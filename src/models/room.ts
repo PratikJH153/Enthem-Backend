@@ -6,7 +6,7 @@ const Room = new mongoose.Schema(
     title: {
       type: String,
       required: [true, 'title is required'],
-      maxlength: 30,
+      maxlength: 100,
       minlength: 3
     },    
     des: {
@@ -41,7 +41,7 @@ const Room = new mongoose.Schema(
         default: 0
     },
   },
-  { timestamps: true }
+  { collection: 'rooms', timestamps: true }
 );
 
 export default mongoose.model<IRoom & mongoose.Document>('roomModel', Room);

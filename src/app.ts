@@ -5,9 +5,7 @@ import socketLoader from "./loaders/socket";
 
 async function startServer() {
     const app = express();
-    
-    // const socket = socketLoader(app);
-
+    const socket = socketLoader(app);
     await require('./loaders').default({ expressApp: app });
 
     app.listen(config.port, () => {
