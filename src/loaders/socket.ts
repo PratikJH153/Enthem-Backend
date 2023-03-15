@@ -9,7 +9,7 @@ export default (app) => {
   const io = new Server(server);
   const socketService = Container.get(SocketService);
   
-  io.attach(+config.socketPort);
+//   io.attach(+config.socketPort);
 
   io.on("connection", (socket) => {
     console.log("Backend Connected");
