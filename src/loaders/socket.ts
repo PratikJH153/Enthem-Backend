@@ -8,7 +8,7 @@ export default (app) => {
   const server = createServer(app);
   const io = new Server(server);
   const socketService = Container.get(SocketService);
-  
+  console.log(io);
   io.on("connection", (socket) => {
     console.log("Backend Connected");
     var roomID: string;
