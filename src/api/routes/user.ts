@@ -374,7 +374,6 @@ export default (app: Router) => {
         try {
           const session = db.session({ database: "neo4j" });
           const interests = req.body.interests.map(interest => `"${interest}"`).join(', ');
-          console.log(interests);
           const query = `
           WITH [${interests}] AS interestsList
           UNWIND interestsList AS interest
