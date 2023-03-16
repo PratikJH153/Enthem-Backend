@@ -36,8 +36,8 @@ export default class RoomService {
     return {data: data};
   }
 
-  public async getRoom(): Promise<any> {
-    const data:Array<IRoom> = await this.room.find();
+  public async getRoom(id: String): Promise<any> {
+    const data:Array<IRoom> = await this.room.findById(id);
 
     if (!data) {
       throw new Error("Could not get room!");

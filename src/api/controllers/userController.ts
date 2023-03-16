@@ -8,7 +8,7 @@ import debugError from '../../services/debug_error';
 export default class UserController {
   private db: Driver;
   constructor(
-    @Inject('logger') private logger
+    @Inject('logger') private logger,
   ) {
     this.db = driver(config.databaseURL, auth.basic(config.dbUser, config.dbPass),
       {/* encrypted: 'ENCRYPTION_OFF' */ },);
@@ -451,7 +451,6 @@ export default class UserController {
     try {
       const session = this.db.session({ database: "neo4j" });
       const interests = req.body.interests.map(interest => `"${interest}"`).join(', ');
-      console.log(interests);
       const query = `
       WITH [${interests}] AS interestsList
       UNWIND interestsList AS interest
