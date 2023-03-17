@@ -4,8 +4,6 @@ import config from "../../config";
 import debugError from '../../services/debug_error';
 
 
-
-
 const updateUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
 
