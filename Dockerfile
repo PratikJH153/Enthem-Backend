@@ -12,4 +12,4 @@ ENV PORT=8080
 ENV SOCKET_PORT=8000
 EXPOSE 8080
 EXPOSE 8000
-CMD [ "npm","dev" ]
+CMD [ "npm", "run","start" ]

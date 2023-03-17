@@ -7,7 +7,7 @@
     "build": "tsc",
     "tsc": "tsc",
     "heroku-postbuild": "npm run build",
-    "start": "node",
+    "start": "node build/app.js",
     "debug": "nodemon",
     "execute": "node build/app.js",
     "inspect": "nodemon --inspect src/app.ts",
