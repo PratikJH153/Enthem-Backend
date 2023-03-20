@@ -74,7 +74,7 @@ export default class UserController{
   
       const updateQuery = `
         MATCH (u:User {id: "${req.body.id}"})
-        SET ${setQuery}
+        SET u.username = LOWER("${req.body.username}"), ${setQuery}
         RETURN u.username AS username, u.age AS age, u. photoURL as photoURL, u.latitude AS latitude, u.longitude AS longitude, u.gender AS gender
       `;
   
@@ -204,7 +204,7 @@ export default class UserController{
       const createQuery = `
       CREATE (u:User {
         id: "${userInput.id}",
-        username: "${userInput.username}",
+        username: toLower("${userInput.username}"),
         email: "${userInput.email}",
         photoURL: "${userInput.photoURL}",
         gender: COALESCE("${userInput.gender}", "Unknown"),
