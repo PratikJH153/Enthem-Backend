@@ -13,12 +13,6 @@ export default class RoomService {
   }
 
   public async addRoom(title: string): Promise<any> {
-    const room:IRoom = await this.room.findOne({ title: title });
-
-    if (room) {
-      throw new Error("Room with that name already exists!");
-    }
-
     const data:IRoom = await this.room.create({ title: title, ownerID: "asdfsadfsdaf" });
     if (!data) {
       throw new Error("Could not create room!");
