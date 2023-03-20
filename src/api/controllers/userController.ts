@@ -444,7 +444,6 @@ export default class UserController{
     try {
       const session = this.db.session({ database: "neo4j" });
       const interests = req.body.interests.map(interest => `"${interest}"`).join(', ');
-      console.log(interests);
       const query = `
       WITH [${interests}] AS interestsList
       UNWIND interestsList AS interest
@@ -491,6 +490,80 @@ export default class UserController{
       return next(e);
     }
   };
+
+
+  public updateInterests = async (req: Request, res: Response, next: NextFunction)  =>{
+    try {
+      const session = this.db.session({ database: "neo4j" });
+      const userQuery = `
+        MATCH (n:User{id:"${req.body.id}"})
+        RETURN n.id AS id
+      `;
+      const userResult = await session.run(userQuery);
+      if (userResult.records.length === 0) {
+        session.close();
+        return res.status(404).json({ status: 404, data: "Sorry, no user with the given ID exists." });
+      }
+      const interests = req.body.interests.map(interest => `"${interest}"`).join(', ');
+      const interestQuery = `
+          WITH [${interests}] AS interestsList
+          UNWIND interestsList AS interest
+          MERGE (s:Activity {name:interest})
+          WITH s
+          MATCH (u:User {id: "${req.body.id}"})
+          MERGE (u)-[:HAS_INTEREST]->(s)
+          RETURN u.id AS id, collect(s.name) AS interests
+      `;
+      const result = await session.run(interestQuery);
+      if (result.records.length > 0){
+        const resultList = result.records.map(record => ({
+          id: record.get('id'),
+          interests: record.get('interests')
+        }));
+        session.close();
+        return res.status(200).json({ status: 200, data: resultList });
+      }
+    } catch (error) {
+      debugError(error.toString());
+      return next(error);
+    }
+  };
+
+  // public custom_fetch = async (req: Request, res: Response, next: NextFunction)  =>{
+  //   try {
+  //     const session = this.db.session({ database: "neo4j" });
+  //     const userQuery = `
+  //       MATCH (n:User{id:"${req.body.id}"})
+  //       RETURN n.id AS id
+  //     `;
+  //     const userResult = await session.run(userQuery);
+  //     if (userResult.records.length === 0) {
+  //       session.close();
+  //       return res.status(404).json({ status: 404, data: "Sorry, please register to make a request !" });
+  //     }
+  //     const fetchQuery = `
+  //       MATCH (u:User)
+  //       WHERE point.distance(point({latitude: u.latitude, longitude: u.longitude}), point({latitude: ${req.body.latitude}, longitude: ${req.body.longitude}})) <= 100 AND (
+  //         u.age = ${req.body.age} OR u.gender="${req.body.gender}"
+  //       )
+        
+  //       RETURN u.id AS id, u.username AS username, u.email AS email, u.photoURL AS photoURL, u.latitude AS latitude, u.longitude AS longitude, u.age AS age, u.gender AS gender
+        
+  //     `;
+  //     const result = await session.run(fetchQuery);
+  //     if (result.records.length > 0){
+  //       const resultList = result.records.map(record => ({
+  //         id: record.get('id'),
+  //         username : record.get('username')
+  //       }));
+  //       session.close();
+  //       return res.status(200).json({ status: 200, data: resultList });
+  //     }
+  //   } catch (error) {
+  //     debugError(error.toString());
+  //     return next(error);
+  //   }
+  // };
 
 
 }
