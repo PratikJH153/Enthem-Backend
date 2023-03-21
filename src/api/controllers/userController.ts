@@ -153,7 +153,7 @@ export default class UserController{
     try {
       const session = this.db.session({ database: "neo4j" });
       const query = `
-      MATCH (n:User {name:"${req.body.username}"})
+      MATCH (n:User {username:"${req.body.username}"})
       RETURN n.id AS id;
     `;
       const result = await session.run(query);
@@ -204,7 +204,7 @@ export default class UserController{
       const createQuery = `
       CREATE (u:User {
         id: "${userInput.id}",
-        username: "${userInput.username}",
+        username: "${userInput.username.toLowerCase()}",
         email: "${userInput.email}",
         photoURL: "${userInput.photoURL}",
         gender: COALESCE("${userInput.gender}", "Unknown"),
