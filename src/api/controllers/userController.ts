@@ -529,41 +529,52 @@ export default class UserController{
     }
   };
 
-  // public custom_fetch = async (req: Request, res: Response, next: NextFunction)  =>{
-  //   try {
-  //     const session = this.db.session({ database: "neo4j" });
-  //     const userQuery = `
-  //       MATCH (n:User{id:"${req.body.id}"})
-  //       RETURN n.id AS id
-  //     `;
-  //     const userResult = await session.run(userQuery);
-  //     if (userResult.records.length === 0) {
-  //       session.close();
-  //       return res.status(404).json({ status: 404, data: "Sorry, please register to make a request !" });
-  //     }
-  //     const fetchQuery = `
-  //       MATCH (u:User)
-  //       WHERE point.distance(point({latitude: u.latitude, longitude: u.longitude}), point({latitude: ${req.body.latitude}, longitude: ${req.body.longitude}})) <= 100 AND (
-  //         u.age = ${req.body.age} OR u.gender="${req.body.gender}"
-  //       )
-        
-  //       RETURN u.id AS id, u.username AS username, u.email AS email, u.photoURL AS photoURL, u.latitude AS latitude, u.longitude AS longitude, u.age AS age, u.gender AS gender
-        
-  //     `;
-  //     const result = await session.run(fetchQuery);
-  //     if (result.records.length > 0){
-  //       const resultList = result.records.map(record => ({
-  //         id: record.get('id'),
-  //         username : record.get('username')
-  //       }));
-  //       session.close();
-  //       return res.status(200).json({ status: 200, data: resultList });
-  //     }
-  //   } catch (error) {
-  //     debugError(error.toString());
-  //     return next(error);
-  //   }
-  // };
+  public custom_fetch = async (req: Request, res: Response, next: NextFunction)  =>{
+    try {
+      const session = this.db.session({ database: "neo4j" });
+      const userQuery = `
+        MATCH (n:User{id:"${req.body.id}"})
+        RETURN n.id AS id
+      `;
+      const userResult = await session.run(userQuery);
+      if (userResult.records.length === 0) {
+        session.close();
+        return res.status(404).json({ status: 404, data: "Sorry, please register to make a request !" });
+      }
+      const fetchQuery = `
+        MATCH (u:User)
+        WHERE point.distance(point({latitude: u.latitude, longitude: u.longitude}), point({latitude: $latitude, longitude: $longitude})) / 1609.34 <= 1000
+        AND (CASE WHEN $age <> '' THEN u.age = $age ELSE true END)
+        AND (CASE WHEN $gender <> '' THEN u.gender = $gender ELSE true END)
+        AND (CASE WHEN $interests <> '' THEN EXISTS { (u)-[:HAS_INTEREST]->(:Activity {name: $interests}) } ELSE true END)
+        RETURN u.username AS username, u.photoURL as photoURL, u.age AS age, u.gender AS gender
+      `;
+      const params = {
+        latitude: req.body.latitude,
+        longitude: req.body.longitude,
+        age: req.body.age || '',
+        gender: req.body.gender ? req.body.gender.toLowerCase() : '',
+        interests: req.body.interests || '',
+      };
+      const result = await session.run(fetchQuery, params);
+      if (result.records.length > 0){
+        const resultList = result.records.map(record => ({
+          username : record.get('username'),
+          photoURL: record.get('photoURL'),
+          age: record.get('age').toNumber(),
+          gender: record.get('gender')
+        }));
+        session.close();
+        return res.status(200).json({ status: 200, data: resultList });
+      } else {
+        session.close();
+        return res.status(200).json({ status: 200, data: [] });
+      }
+    } catch (error) {
+      debugError(error.toString());
+      return next(error);
+    }
+  };
 
 
 }
