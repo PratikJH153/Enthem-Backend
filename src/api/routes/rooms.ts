@@ -1,52 +1,28 @@
 import { NextFunction, Request, Response, Router } from 'express';
 import checkAuth from "../middleware/check_auth";
-
 import Container from 'typedi';
 import debugError from '../../services/debug_error';
-import RoomService from '../../services/room_service';
+import RoomController from '../controllers/roomController';
 
 const route = Router();
 
 export default (app: Router) => {
   app.use('/room', route);
 
-  const roomService = Container.get(RoomService);
+  const roomController = Container.get(RoomController);
 
   //* GET CALLS
-  route.get('/all', checkAuth, async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const jsonData = await roomService.getAllRoooms();
-      const data = jsonData["data"];
-      return res.status(200).json({ status: 200, data: data });
+  route.get('/all', checkAuth, roomController.getAllRooms);
 
-    } catch (e) {
-      debugError(e.toString());
-      return next(e);
-    }
-  });
-
-  route.get('/', checkAuth, async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const jsonData = await roomService.getRoom(req.body.id);
-      const data = jsonData["data"];
-      return res.status(200).json({ status: 200, data: data });
-
-    } catch (e) {
-      debugError(e.toString());
-      return next(e);
-    }
-  });
 
   //* POST CALLS
-  route.post('/', checkAuth, async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const jsonData = await roomService.addRoom(req.body.title);
-      const data = jsonData["data"];
-      return res.status(200).json({ status: 200, data: data });
+  route.post('/addroom',checkAuth,roomController.addRoom);
 
-    } catch (e) {
-      debugError(e.toString());
-      return next(e);
-    }
-  });
+  //*DELETE CALLS
+  route.delete('/deleteroom',checkAuth,roomController.deleteRoom);
+
+  //*PUT CALLS
+  route.put('/addMember',checkAuth,roomController.addMember);
+  route.put('/removeMember',checkAuth,roomController.removeMember);
+  
 };

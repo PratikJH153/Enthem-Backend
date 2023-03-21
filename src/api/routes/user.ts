@@ -26,6 +26,7 @@ export default (app: Router) => {
     route.get('/locRecommend',checkAuth, userController.locRecommend);
     route.get('/compatibleUsers',checkAuth, userController.compatibleUsers);
     route.get('/interests',checkAuth, userController.interestsUser);
+    route.get('/custom_fetch',checkAuth,userController.custom_fetch);
 
     //* POST CALLS
     route.post('/', checkAuth, userController.createUser);
@@ -34,6 +35,7 @@ export default (app: Router) => {
 
     //* PUT CALLS
     route.put('/', checkAuth, userController.updateUser);
+    route.put('/updateInterests',checkAuth,userController.updateInterests);
 
     //* DELETE CALLS
     route.delete('/', checkAuth, userController.deleteUser);
