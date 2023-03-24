@@ -606,5 +606,30 @@ export default class UserController{
     }
   };
 
+  public getUsersByIds = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const session = this.db.session({ database: "neo4j" });
+        const idList = req.body.idList; 
+        const users = [];
+        for (const id of idList) {
+            const query = `
+                MATCH (n:User{id:"${id}"})
+                RETURN u.username as username, u.age as age, u.email as email, u.photoURL as photoURL, u.gender as gender
+            `;
+            const result = await session.run(query);
+            if (result.records.length > 0) {
+                users.push(result.records[0].get("id"));
+            }
+        }
+        session.close();
+        return res.status(200).json({ status: 200, data: users });
+    } catch (e) {
+        debugError(e.toString());
+        return next(e);
+    }
+};
+
+
+
 
 }
