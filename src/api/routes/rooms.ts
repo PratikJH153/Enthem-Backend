@@ -1,7 +1,6 @@
-import { NextFunction, Request, Response, Router } from 'express';
+import { Router } from 'express';
 import checkAuth from "../middleware/check_auth";
 import Container from 'typedi';
-import debugError from '../../services/debug_error';
 import RoomController from '../controllers/roomController';
 
 const route = Router();
@@ -13,16 +12,16 @@ export default (app: Router) => {
 
   //* GET CALLS
   route.get('/all', checkAuth, roomController.getAllRooms);
-
+  route.get('/', checkAuth, roomController.getRoom);
 
   //* POST CALLS
-  route.post('/addroom',checkAuth,roomController.addRoom);
-
-  //*DELETE CALLS
-  route.delete('/deleteroom',checkAuth,roomController.deleteRoom);
+  route.post('/', checkAuth, roomController.addRoom);
 
   //*PUT CALLS
-  route.put('/addMember',checkAuth,roomController.addMember);
-  route.put('/removeMember',checkAuth,roomController.removeMember);
-  
+  route.put('/addmember', checkAuth, roomController.addMember);
+  route.put('/removemember', checkAuth, roomController.removeMember);
+
+  //*DELETE CALLS
+  route.delete('/', checkAuth, roomController.deleteRoom);
+
 };

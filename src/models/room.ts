@@ -25,15 +25,14 @@ const Room = new mongoose.Schema(
       required:false,
       default: Date.now
     },
-    latitude: {
-        type:Number,
-        required: false,
-        default: 100
-    },
-    longitude: {
-        type:Number,
-        required: false,
-        default: 100
+    location: {
+      type:{
+        type:String,
+        enum:["Point"]
+      },
+      coordinates:{
+        type:[Number]
+      }
     },
     votes: {
         type:Number,
@@ -47,5 +46,7 @@ const Room = new mongoose.Schema(
   },
   { collection: 'rooms', timestamps: true }
 );
+
+Room.index({location: "2dsphere"})
 
 export default mongoose.model<IRoom & mongoose.Document>('roomModel', Room);

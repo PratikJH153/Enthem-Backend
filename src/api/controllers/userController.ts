@@ -1,7 +1,5 @@
-import { Router, Request, Response, NextFunction } from 'express';
-import { driver, auth, Driver, Session } from "neo4j-driver";
-import { Inject, Service } from 'typedi';
-import config from "../../config";
+import { Request, Response, NextFunction } from 'express';
+import { Driver } from "neo4j-driver";
 import debugError from '../../services/debug_error';
 
 
@@ -100,10 +98,10 @@ export default class UserController{
     try {
       const session = this.db.session({ database: "neo4j" });
       const query = `
-        MATCH (n:User {id:"${req.body.id}"})
+        MATCH (n:User {id:"${req.body.id}"})-[r:HAS_INTEREST]->(n2:Activity)
         RETURN n.id AS id, n.username AS username, n.email AS email, n.age AS age,
           n.gender AS gender, n.photoURL AS photoURL,
-          n.latitude AS latitude, n.longitude AS longitude;
+          n.latitude AS latitude, n.longitude AS longitude, COLLECT(DISTINCT n2.name) AS interests;
       `;
       const result = await session.run(query);
       if (result.records.length > 0) {
@@ -116,7 +114,8 @@ export default class UserController{
           gender: record.get('gender'),
           photoURL: record.get('photoURL'),
           latitude: record.get('latitude'),
-          longitude: record.get('longitude')
+          longitude: record.get('longitude'),
+          interests: record.get('interests')
         };
         session.close();
         return res.status(200).json({ status: 200, data: data });
@@ -466,24 +465,16 @@ export default class UserController{
   public interestsUser = async (req: Request, res: Response, next: NextFunction)=> {
     try {
       const session = this.db.session({ database: "neo4j" });
-      const query1 = `
-      MATCH (n:User{id:"${req.body.id}"})
-      RETURN n.id AS id
-    `;
-      const result1 = await session.run(query1);
-      if (result1.records.length === 0) {
-        return res.status(404).json({ status: 404, message: "Sorry, no user with the given ID exists." });
-      }
       const query2 = `
       MATCH (n:User{id:"${req.body.id}"})-[r:HAS_INTEREST]->(n2:Activity)
-      RETURN DISTINCT n2.name AS interest
+      RETURN COLLECT(DISTINCT n2.name) AS interest
     `;
       const result2 = await session.run(query2);
       session.close();
       if (result2.records.length > 0) {
-        return res.status(200).json({ status: 200, data: true });
+        return res.status(200).json({ status: 200, data: result2.records[0]["_fields"][0] });
       } else {
-        return res.status(404).json({ status: 404, data: false });
+        return res.status(404).json({ status: 404, data: [] });
       }
     } catch (e) {
       debugError(e.toString());
@@ -495,15 +486,6 @@ export default class UserController{
   public updateInterests = async (req: Request, res: Response, next: NextFunction)  =>{
     try {
       const session = this.db.session({ database: "neo4j" });
-      const userQuery = `
-        MATCH (n:User{id:"${req.body.id}"})
-        RETURN n.id AS id
-      `;
-      const userResult = await session.run(userQuery);
-      if (userResult.records.length === 0) {
-        session.close();
-        return res.status(404).json({ status: 404, data: "Sorry, no user with the given ID exists." });
-      }
       const interests = req.body.interests.map(interest => `"${interest}"`).join(', ');
       const interestQuery = `
           WITH [${interests}] AS interestsList
@@ -532,15 +514,7 @@ export default class UserController{
   public custom_fetch = async (req: Request, res: Response, next: NextFunction)  =>{
     try {
       const session = this.db.session({ database: "neo4j" });
-      const userQuery = `
-        MATCH (n:User{id:"${req.body.id}"})
-        RETURN n.id AS id
-      `;
-      const userResult = await session.run(userQuery);
-      if (userResult.records.length === 0) {
-        session.close();
-        return res.status(404).json({ status: 404, data: "Sorry, please register to make a request !" });
-      }
+
       const fetchQuery = `
         MATCH (u:User)
         WHERE point.distance(point({latitude: u.latitude, longitude: u.longitude}), point({latitude: $latitude, longitude: $longitude})) / 1609.34 <= 1000

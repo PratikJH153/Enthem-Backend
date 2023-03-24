@@ -14,14 +14,14 @@ export default (app) => {
     console.log("Backend Connected");
     var roomID: string;
 
-    socket.on("sendRoomID", (roomID) => {
-      roomID = roomID;
-      socket.join(roomID);
-    });
+    socket.on('disconnect', async (memberID) => {
+      console.log("User removed");
+      console.log(await roomService.removeMember(roomID, memberID));
+    })
 
-    socket.on('disconnect', () => {
+    socket.on('disconnect', async () => {
       console.log("User Disconnected");
-      socket.leave(roomID)
+      socket.leave(roomID);
     })
 
     socket.on("sendMsg", (msg) => {
@@ -49,8 +49,11 @@ export default (app) => {
     //add member to memberlist of chat room
     socket.on("joinRoom", async (data) => {
       try {
-        const { roomID, memberID } = data;
-        await roomService.addMember(roomID, memberID);
+        const { id, memberID } = data;
+        roomID = id;
+        console.log(memberID);
+        socket.join(roomID);
+        console.log(await roomService.addMember(roomID, memberID));
         socket.to(roomID).emit("userJoinedRoom", { memberID });
       } catch (error) {
         console.log(error);
@@ -61,7 +64,7 @@ export default (app) => {
     socket.on("removeMember", async (data) => {
       try {
         const { roomID, memberID, ownerID } = data;
-        await roomService.removeMember(roomID, memberID, ownerID);
+        await roomService.removeMember(roomID, memberID);
         socket.to(roomID).emit("user removed by Admin", { memberID });
       } catch (error) {
         console.log(error);

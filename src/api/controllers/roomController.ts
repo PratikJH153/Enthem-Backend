@@ -1,73 +1,97 @@
-import mongoose, { Types } from "mongoose";
-import { Router, Request, Response, NextFunction } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import RoomService from '../../services/room_service';
-import {Container, Service} from 'typedi';
+import { Container, Service } from 'typedi';
 import debugError from '../../services/debug_error';
 
 @Service()
-export default class RoomController{
+export default class RoomController {
   roomService: RoomService;
-  constructor(){
+  constructor() {
     this.roomService = Container.get(RoomService);
   }
 
-  
-  public getAllRooms=async (req: Request, res: Response, next: NextFunction)=> {
-      try {
-          const page = parseInt(req.query.page as string) || 1;
-          const limit = parseInt(req.query.limit as string) || 10;
-          const maxPages = parseInt(req.query.maxPages as string) || 10;
-          const data = await this.roomService.getAllRooms(page, limit, maxPages);
-          return res.status(200).json({ status: 200, data: data["data"] });
-      } catch (e) {
-          debugError(e.toString());
-          return next(e);
+
+  public getAllRooms = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const miles = req.body.miles || 5;
+      const coordinates = req.body.coordinates;
+      const data = await this.roomService.getAllRooms(page, miles, coordinates);
+      if (data){
+        return res.status(200).json({ status: 200, data: data["data"] });
+      } else{
+        return res.status(404).json({ status: 200, data: [] });
       }
+    } catch (error) {
+      debugError(error.toString());
+      return res.status(500).json({ status: 500, data: [] });
+    }
   };
 
-
-  public addRoom = async (req: Request, res: Response,next:NextFunction) => {
+  public getRoom = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const data=await this.roomService.addRoom(req.body.ownerID, req.body.latitude, req.body.longitude, req.body.title)
+      const data = await this.roomService.getRoom(req.body.id);
+      if (data["data"]){
+        return res.status(200).json({ status: 200, data: data["data"] });
+      }
+      return res.status(404).json({ status: 404, data: "Room not found!" });
+    } catch (error) {
+      debugError(error.toString());
+      return res.status(500).json({ status: 500, data: [] });
+    }
+  };
+
+  public addRoom = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const updateOps: Map<String, Object> = new Map<String, Object>;
+      for (const [key, value] of Object.entries(req.body)) {
+        if (key == "coordinates"){
+          updateOps["location"] = {
+            type: 'Point',
+            coordinates: value
+          }
+        } else{
+          updateOps[key] = value;
+        }
+      } 
+      const data = await this.roomService.addRoom(updateOps)
       return res.status(200).json({ status: 200, data: data["data"] });
     } catch (error) {
-      console.error(error);
+      debugError(error.toString());
       return res.status(500).json({ status: 500, data: "Server Issue" });
     }
   };
-  
-  public deleteRoom = async (req: Request, res: Response,next:NextFunction) => {
+
+  public deleteRoom = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const data=await this.roomService.deleteRoom(req.body.roomID)
-      return res.status(200).json({ status: 200, data: data["data"] });
+      const {roomID, ownerID} = req.body;
+      const data = await this.roomService.deleteRoom(roomID, ownerID);
+      return res.status(data["status"]).json({ status: data["status"], data: data["data"] });
     } catch (error) {
-      console.error(error);
+      debugError(error.toString());
       return res.status(500).json({ message: "Server error" });
     }
   };
 
   public addMember = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const data = await this.roomService.addMember(req.body.roomID, req.body.memberID);
-      return res.status(200).json({ status: 200, data: data["data"] });
+      const {roomID, memberID} = req.body;
+      const data = await this.roomService.addMember(roomID, memberID);
+      return res.status(data["status"]).json({ status: data["status"], data: data["data"] });
     } catch (error) {
-      console.error(error);
+      debugError(error.toString());
       return res.status(500).json({ message: "Server error" });
     }
   };
 
   public removeMember = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { roomID, ownerID, memberID } = req.body;
-      const data = await this.roomService.removeMember(roomID, ownerID, memberID);
+      const { roomID, memberID } = req.body;
+      const data = await this.roomService.removeMember(roomID, memberID);
       return res.status(200).json({ status: 200, data: data["data"] });
     } catch (error) {
-      console.error(error);
+      debugError(error.toString());
       return res.status(500).json({ message: "Server error" });
     }
   };
-
-  
-
-  
 };
