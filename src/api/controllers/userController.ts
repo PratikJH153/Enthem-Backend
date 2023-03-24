@@ -472,7 +472,7 @@ export default class UserController{
     `;
       const result1 = await session.run(query1);
       if (result1.records.length === 0) {
-        return res.status(404).json({ status: 404, message: "Sorry, no user with the given ID exists." });
+        return res.status(404).json({ status: 404, data: "Sorry, no user with the given ID exists." });
       }
       const query2 = `
       MATCH (n:User{id:"${req.body.id}"})-[r:HAS_INTEREST]->(n2:Activity)
@@ -490,6 +490,36 @@ export default class UserController{
       return next(e);
     }
   };
+
+  public returnInterests = async (req: Request, res: Response, next: NextFunction)=> {
+    try {
+      const session = this.db.session({ database: "neo4j" });
+      const query1 = `
+      MATCH (n:User{id:"${req.body.id}"})
+      RETURN n.id AS id
+    `;
+      const result1 = await session.run(query1);
+      if (result1.records.length === 0) {
+        return res.status(404).json({ status: 404, message: "Sorry, no user with the given ID exists." });
+      }
+      const query2 = `
+      MATCH (n:User{id:"${req.body.id}"})-[r:HAS_INTEREST]->(n2:Activity)
+      RETURN COLLECT(DISTINCT n2.name) AS interests
+    `;
+      const result2 = await session.run(query2);
+      session.close();
+      if (result2.records.length > 0) {
+        const interests = result2.records[0].get('interests');
+        return res.status(200).json({ status: 200, data: interests });
+      } else {
+        return res.status(404).json({ status: 404, data: [] });
+      }
+    } catch (e) {
+      debugError(e.toString());
+      return next(e);
+    }
+  };
+
 
 
   public updateInterests = async (req: Request, res: Response, next: NextFunction)  =>{

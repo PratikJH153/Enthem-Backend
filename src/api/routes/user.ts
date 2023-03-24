@@ -27,6 +27,7 @@ export default (app: Router) => {
     route.get('/compatibleUsers',checkAuth, userController.compatibleUsers);
     route.get('/interests',checkAuth, userController.interestsUser);
     route.get('/custom_fetch',checkAuth,userController.custom_fetch);
+    route.get('/returnInterests',checkAuth,userController.returnInterests);
 
     //* POST CALLS
     route.post('/', checkAuth, userController.createUser);
