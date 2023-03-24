@@ -482,6 +482,36 @@ export default class UserController{
     }
   };
 
+  public returnInterests = async (req: Request, res: Response, next: NextFunction)=> {
+    try {
+      const session = this.db.session({ database: "neo4j" });
+      const query1 = `
+      MATCH (n:User{id:"${req.body.id}"})
+      RETURN n.id AS id
+    `;
+      const result1 = await session.run(query1);
+      if (result1.records.length === 0) {
+        return res.status(404).json({ status: 404, message: "Sorry, no user with the given ID exists." });
+      }
+      const query2 = `
+      MATCH (n:User{id:"${req.body.id}"})-[r:HAS_INTEREST]->(n2:Activity)
+      RETURN COLLECT(DISTINCT n2.name) AS interests
+    `;
+      const result2 = await session.run(query2);
+      session.close();
+      if (result2.records.length > 0) {
+        const interests = result2.records[0].get('interests');
+        return res.status(200).json({ status: 200, data: interests });
+      } else {
+        return res.status(404).json({ status: 404, data: [] });
+      }
+    } catch (e) {
+      debugError(e.toString());
+      return next(e);
+    }
+  };
+
+
 
   public updateInterests = async (req: Request, res: Response, next: NextFunction)  =>{
     try {
@@ -550,5 +580,33 @@ export default class UserController{
     }
   };
 
-
+  public getUsersByIds = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const session = this.db.session({ database: "neo4j" });
+        const idList = req.body.idList; 
+        const users = [];
+        for (const id of idList) {
+            const query = `
+                MATCH (n:User{id:"${id}"})
+                RETURN n.username AS username, n.photoURL AS photoURL, n.age AS age, n.gender AS gender, n.email AS email
+            `;
+            const result = await session.run(query);
+            if (result.records.length > 0) {
+                const user = result.records[0];
+                users.push({
+                    username: user.get('username'),
+                    photoURL: user.get('photoURL'),
+                    age: user.get('age').toNumber(),
+                    gender: user.get('gender'),
+                    email: user.get('email')
+                });
+            }
+        }
+        session.close();
+        return res.status(200).json({ status: 200, data: users });
+    } catch (e) {
+        debugError(e.toString());
+        return next(e);
+    }
+  };
 }

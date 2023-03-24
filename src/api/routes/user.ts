@@ -24,7 +24,9 @@ export default (app: Router) => {
     route.get('/locRecommend',checkAuth, userController.locRecommend);
     route.get('/foryou',checkAuth, userController.compatibleUsers);
     route.get('/interests',checkAuth, userController.interestsUser);
-    route.get('/filters',checkAuth,userController.custom_fetch);
+    route.get('/custom_fetch',checkAuth,userController.custom_fetch);
+    route.get('/returnInterests',checkAuth,userController.returnInterests);
+    route.get('/getUserByIds',checkAuth,userController.getUsersByIds);
 
     //* POST CALLS
     route.post('/', checkAuth, userController.createUser);
