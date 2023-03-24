@@ -614,11 +614,18 @@ export default class UserController{
         for (const id of idList) {
             const query = `
                 MATCH (n:User{id:"${id}"})
-                RETURN u.username as username, u.age as age, u.email as email, u.photoURL as photoURL, u.gender as gender
+                RETURN n.username AS username, n.photoURL AS photoURL, n.age AS age, n.gender AS gender, n.email AS email
             `;
             const result = await session.run(query);
             if (result.records.length > 0) {
-                users.push(result.records[0].get("id"));
+                const user = result.records[0];
+                users.push({
+                    username: user.get('username'),
+                    photoURL: user.get('photoURL'),
+                    age: user.get('age').toNumber(),
+                    gender: user.get('gender'),
+                    email: user.get('email')
+                });
             }
         }
         session.close();
@@ -627,7 +634,8 @@ export default class UserController{
         debugError(e.toString());
         return next(e);
     }
-};
+  };
+
 
 
 
