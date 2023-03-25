@@ -1,53 +1,120 @@
-import { range } from 'lodash';
-import { Service, Inject, Container } from 'typedi';
+import { Service, Inject } from 'typedi';
 import { IRoom } from '../interfaces/IRoom';
+import { startSession } from 'mongoose';
 
 @Service()
 export default class RoomService {
 
   constructor(
-    @Inject('logger') private logger,
     @Inject('roomModel') private room: Models.roomModel
-    ) 
-    {
+  ) {
   }
 
-  public async addRoom(title: string): Promise<any> {
-    const data:IRoom = await this.room.create({ title: title, ownerID: "asdfsadfsdaf" });
-    if (!data) {
-      throw new Error("Could not create room!");
+  public async getAllRooms(page: number = 1, miles: number, coordinates: Array<Number>): Promise<any> {
+    try {
+      const skip = (page - 1) * 5;
+      const data = await this.room.find(
+        {
+          location: {
+            $near: {
+              $maxDistance: 1 * miles * 1609.344, // distance in meters
+              $geometry: {
+                type: 'Point',
+                coordinates: coordinates
+              }
+            }
+          }
+        }
+      )
+        .sort({ createdAt: "desc" })
+        .skip(skip)
+        .limit(5)
+        .exec();
+      
+      return {
+        data: data ?? []
+      };
+    } catch (err) {
+      throw new Error(err);
+    }
+  }
+
+  public async getRoom(id: string): Promise<any> {
+    try {
+      const data = await this.room.findById(id);
+      return {
+        data: data
+      };
+    } catch (err) {
+      throw new Error(err);
     }
 
-    return { data: `Room with name ${title} created successfully!` };
   }
 
-  public async getAllRoooms(): Promise<any> {
-    const data:Array<IRoom> = await this.room.find().sort({"createdAt": "desc"}).exec();
-    if (!data) {
-      throw new Error("Could not get room!");
+
+  public async addRoom(roomData: Map<String, Object>): Promise<any> {
+    try {
+      const data: IRoom = await this.room.create(roomData);
+      if (!data) {
+        throw new Error("Could not create room!");
+      }
+      return { data: `Room created successfully!` };
+    } catch (err) {
+      throw new Error(err);
     }
 
-    return {data: data};
   }
 
-  public async getRoom(id: String): Promise<any> {
-    const data:Array<IRoom> = await this.room.findById(id);
-
-    if (!data) {
-      throw new Error("Could not get room!");
+  public async deleteRoom(roomID: string, ownerID: string): Promise<any> {
+    try{
+      const data = await this.room.deleteOne({ _id: roomID, ownerID: {$eq: ownerID} });
+      if (data["deletedCount"] > 0){
+        return { status: 200, data: "Room deleted successfully!" };
+      } else{
+        return { status: 404, data: "RoomID or OwnerID is incorrect!"};
+      }
+    } catch(err){
+      throw new Error(err);
     }
-
-    return {data: data};
   }
 
-  public async deleteRoom(name: string): Promise<any> {
-    const room = await this.room.findOneAndDelete({ name: name });
-
-    if (!room) {
-      throw new Error("Room doesn't exist!");
+  public async addMember(roomID: string, memberID: string): Promise<any> {
+    const session  = await startSession();
+    session.startTransaction();
+    try {
+      const data = {status: 200, data: `Member added successfully!`};
+      const isExist = await this.room.findById(roomID).where("memberlist.memberId").in([memberID]).exec();
+      if (!isExist){
+        await this.room.updateOne({ _id: roomID }, { $push: { memberlist: { memberId: memberID, permit: false } } });
+      } else{
+        data["status"] = 409;
+        data["data"] = "Member already exists";
+      }
+      await session.commitTransaction();
+      return data;
+    } catch (err) {
+      await session.abortTransaction();
+      throw new Error(err);
+    } finally{
+      session.endSession();
     }
-
-    return { data: "Group deleted successfully!" };
   }
 
+  public async removeMember(roomID: string, memberID: string): Promise<any> {
+    try {
+
+      const updatedRoom = await this.room.findOneAndUpdate(
+        { _id: roomID },
+        { $pull: { memberlist: { memberId: memberID } } },
+      );
+
+      if (!updatedRoom) {
+        throw new Error("Room not found or you are not the owner of the room.");
+      }
+
+      return { data: `Member removed successfully!` };
+    } catch (err) {
+      throw new Error(err);
+    }
+  }
 }

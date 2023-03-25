@@ -1,7 +1,5 @@
-import { Router, Request, Response, NextFunction } from 'express';
-import { driver, auth, Driver, Session } from "neo4j-driver";
-import { Inject, Service } from 'typedi';
-import config from "../../config";
+import { Request, Response, NextFunction } from 'express';
+import { Driver } from "neo4j-driver";
 import debugError from '../../services/debug_error';
 
 
@@ -74,7 +72,7 @@ export default class UserController{
   
       const updateQuery = `
         MATCH (u:User {id: "${req.body.id}"})
-        SET ${setQuery}
+        SET u.username = LOWER("${req.body.username}"), ${setQuery}
         RETURN u.username AS username, u.age AS age, u. photoURL as photoURL, u.latitude AS latitude, u.longitude AS longitude, u.gender AS gender
       `;
   
@@ -100,10 +98,10 @@ export default class UserController{
     try {
       const session = this.db.session({ database: "neo4j" });
       const query = `
-        MATCH (n:User {id:"${req.body.id}"})
+        MATCH (n:User {id:"${req.body.id}"})-[r:HAS_INTEREST]->(n2:Activity)
         RETURN n.id AS id, n.username AS username, n.email AS email, n.age AS age,
           n.gender AS gender, n.photoURL AS photoURL,
-          n.latitude AS latitude, n.longitude AS longitude;
+          n.latitude AS latitude, n.longitude AS longitude, COLLECT(DISTINCT n2.name) AS interests;
       `;
       const result = await session.run(query);
       if (result.records.length > 0) {
@@ -116,7 +114,8 @@ export default class UserController{
           gender: record.get('gender'),
           photoURL: record.get('photoURL'),
           latitude: record.get('latitude'),
-          longitude: record.get('longitude')
+          longitude: record.get('longitude'),
+          interests: record.get('interests')
         };
         session.close();
         return res.status(200).json({ status: 200, data: data });
@@ -153,7 +152,7 @@ export default class UserController{
     try {
       const session = this.db.session({ database: "neo4j" });
       const query = `
-      MATCH (n:User {name:"${req.body.username}"})
+      MATCH (n:User {username:"${req.body.username}"})
       RETURN n.id AS id;
     `;
       const result = await session.run(query);
@@ -204,7 +203,7 @@ export default class UserController{
       const createQuery = `
       CREATE (u:User {
         id: "${userInput.id}",
-        username: "${userInput.username}",
+        username: "${userInput.username.toLowerCase()}",
         email: "${userInput.email}",
         photoURL: "${userInput.photoURL}",
         gender: COALESCE("${userInput.gender}", "Unknown"),
@@ -444,7 +443,6 @@ export default class UserController{
     try {
       const session = this.db.session({ database: "neo4j" });
       const interests = req.body.interests.map(interest => `"${interest}"`).join(', ');
-      console.log(interests);
       const query = `
       WITH [${interests}] AS interestsList
       UNWIND interestsList AS interest
@@ -467,6 +465,26 @@ export default class UserController{
   public interestsUser = async (req: Request, res: Response, next: NextFunction)=> {
     try {
       const session = this.db.session({ database: "neo4j" });
+      const query2 = `
+      MATCH (n:User{id:"${req.body.id}"})-[r:HAS_INTEREST]->(n2:Activity)
+      RETURN COLLECT(DISTINCT n2.name) AS interest
+    `;
+      const result2 = await session.run(query2);
+      session.close();
+      if (result2.records.length > 0) {
+        return res.status(200).json({ status: 200, data: result2.records[0]["_fields"][0] });
+      } else {
+        return res.status(404).json({ status: 404, data: [] });
+      }
+    } catch (e) {
+      debugError(e.toString());
+      return next(e);
+    }
+  };
+
+  public returnInterests = async (req: Request, res: Response, next: NextFunction)=> {
+    try {
+      const session = this.db.session({ database: "neo4j" });
       const query1 = `
       MATCH (n:User{id:"${req.body.id}"})
       RETURN n.id AS id
@@ -477,14 +495,15 @@ export default class UserController{
       }
       const query2 = `
       MATCH (n:User{id:"${req.body.id}"})-[r:HAS_INTEREST]->(n2:Activity)
-      RETURN DISTINCT n2.name AS interest
+      RETURN COLLECT(DISTINCT n2.name) AS interests
     `;
       const result2 = await session.run(query2);
       session.close();
       if (result2.records.length > 0) {
-        return res.status(200).json({ status: 200, data: true });
+        const interests = result2.records[0].get('interests');
+        return res.status(200).json({ status: 200, data: interests });
       } else {
-        return res.status(404).json({ status: 404, data: false });
+        return res.status(404).json({ status: 404, data: [] });
       }
     } catch (e) {
       debugError(e.toString());
@@ -493,4 +512,104 @@ export default class UserController{
   };
 
 
+
+  public updateInterests = async (req: Request, res: Response, next: NextFunction)  =>{
+    try {
+      const session = this.db.session({ database: "neo4j" });
+      const interests = req.body.interests.map(interest => `"${interest}"`).join(', ');
+      const interestQuery = `
+          WITH [${interests}] AS interestsList
+          UNWIND interestsList AS interest
+          MERGE (s:Activity {name:interest})
+          WITH s
+          MATCH (u:User {id: "${req.body.id}"})
+          MERGE (u)-[:HAS_INTEREST]->(s)
+          RETURN u.id AS id, collect(s.name) AS interests
+      `;
+      const result = await session.run(interestQuery);
+      if (result.records.length > 0){
+        const resultList = result.records.map(record => ({
+          id: record.get('id'),
+          interests: record.get('interests')
+        }));
+        session.close();
+        return res.status(200).json({ status: 200, data: resultList });
+      }
+    } catch (error) {
+      debugError(error.toString());
+      return next(error);
+    }
+  };
+
+  public custom_fetch = async (req: Request, res: Response, next: NextFunction)  =>{
+    try {
+      const session = this.db.session({ database: "neo4j" });
+
+      const fetchQuery = `
+        MATCH (u:User)
+        WHERE point.distance(point({latitude: u.latitude, longitude: u.longitude}), point({latitude: $latitude, longitude: $longitude})) / 1609.34 <= 1000
+        AND (CASE WHEN $age <> '' THEN u.age = $age ELSE true END)
+        AND (CASE WHEN $gender <> '' THEN u.gender = $gender ELSE true END)
+        AND (CASE WHEN $interests <> '' THEN EXISTS { (u)-[:HAS_INTEREST]->(:Activity {name: $interests}) } ELSE true END)
+        RETURN u.username AS username, u.photoURL as photoURL, u.age AS age, u.gender AS gender
+      `;
+      const params = {
+        latitude: req.body.latitude,
+        longitude: req.body.longitude,
+        age: req.body.age || '',
+        gender: req.body.gender ? req.body.gender.toLowerCase() : '',
+        interests: req.body.interests || '',
+      };
+      const result = await session.run(fetchQuery, params);
+      if (result.records.length > 0){
+        const resultList = result.records.map(record => ({
+          username : record.get('username'),
+          photoURL: record.get('photoURL'),
+          age: record.get('age').toNumber(),
+          gender: record.get('gender')
+        }));
+        session.close();
+        return res.status(200).json({ status: 200, data: resultList });
+      } else {
+        session.close();
+        return res.status(200).json({ status: 200, data: [] });
+      }
+    } catch (error) {
+      debugError(error.toString());
+      return next(error);
+    }
+  };
+
+  public getUsersByIds = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const session = this.db.session({ database: "neo4j" });
+        const idList = req.body.id; 
+        const users = [];
+        for (const id of idList) {
+            const query = `
+                MATCH (n:User{id:"${id}"})
+                RETURN n.username AS username, n.photoURL AS photoURL, n.age AS age, n.gender AS gender, n.email AS email
+            `;
+            const result = await session.run(query);
+            if (result.records.length > 0) {
+                const user = result.records[0];
+                users.push({
+                    username: user.get('username'),
+                    photoURL: user.get('photoURL'),
+                    age: user.get('age').toNumber(),
+                    gender: user.get('gender'),
+                    email: user.get('email')
+                });
+            }
+        }
+        session.close();
+        if(users.length < 1){
+          return res.status(404).json({status: 200, data: []});
+        }
+        return res.status(200).json({ status: 200, data: users });
+    } catch (e) {
+        debugError(e.toString());
+        return next(e);
+    }
+  };
 }

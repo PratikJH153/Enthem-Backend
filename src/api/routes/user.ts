@@ -1,11 +1,9 @@
-import { NextFunction, Request, Response, Router} from 'express';
+import {Router} from 'express';
 import checkAuth from "../middleware/check_auth";
-import debugError from '../../services/debug_error';
 import config from '../../config/index';
 import { auth } from 'neo4j-driver-core';
 import { Driver, driver } from 'neo4j-driver';
 import UserController from '../controllers/userController';
-import Container from 'typedi';
 
 const route = Router();
 
@@ -24,16 +22,19 @@ export default (app: Router) => {
     route.get('/usernameexists', checkAuth, userController.isUsernameExists);
     route.get('/recommend', checkAuth, userController.recommendUser);
     route.get('/locRecommend',checkAuth, userController.locRecommend);
-    route.get('/compatibleUsers',checkAuth, userController.compatibleUsers);
+    route.get('/foryou',checkAuth, userController.compatibleUsers);
     route.get('/interests',checkAuth, userController.interestsUser);
+    route.get('/custom_fetch',checkAuth,userController.custom_fetch);
+    route.get('/returnInterests',checkAuth,userController.returnInterests);
+    route.get('/getUserByIds',checkAuth,userController.getUsersByIds);
 
     //* POST CALLS
     route.post('/', checkAuth, userController.createUser);
-    // route.post('/createSkills', checkAuth, userController.createSkills);
-    route.post('/createInterests', checkAuth, userController.createInterests);
+    route.post('/interests', checkAuth, userController.createInterests);
 
     //* PUT CALLS
     route.put('/', checkAuth, userController.updateUser);
+    route.put('/interests',checkAuth,userController.updateInterests);
 
     //* DELETE CALLS
     route.delete('/', checkAuth, userController.deleteUser);
