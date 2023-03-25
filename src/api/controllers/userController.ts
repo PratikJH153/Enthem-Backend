@@ -583,7 +583,7 @@ export default class UserController{
   public getUsersByIds = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const session = this.db.session({ database: "neo4j" });
-        const idList = req.body.idList; 
+        const idList = req.body.id; 
         const users = [];
         for (const id of idList) {
             const query = `
@@ -603,6 +603,9 @@ export default class UserController{
             }
         }
         session.close();
+        if(users.length < 1){
+          return res.status(404).json({status: 200, data: []});
+        }
         return res.status(200).json({ status: 200, data: users });
     } catch (e) {
         debugError(e.toString());
