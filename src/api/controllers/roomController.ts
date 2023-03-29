@@ -2,7 +2,6 @@ import { Request, Response, NextFunction } from 'express';
 import RoomService from '../../services/room_service';
 import { Container, Service } from 'typedi';
 import debugError from '../../services/debug_error';
-import { encrypt,decrypt } from './encrypt';
 
 @Service()
 export default class RoomController {
