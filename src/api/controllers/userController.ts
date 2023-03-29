@@ -1,6 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import { Driver } from "neo4j-driver";
 import debugError from '../../services/debug_error';
+import { encrypt,decrypt } from './encrypt';
+import crypto from 'crypto';
 
 
 export default class UserController{
@@ -35,8 +37,8 @@ export default class UserController{
 
       const resultList = result.records.map(record => ({
         id: record.get('id'),
-        username: record.get('username'),
-        email: record.get('email'),
+        username: decrypt(record.get('username'),process.env.SECRET_KEY),
+        email: decrypt(record.get('email'),process.env.SECRET_KEY),
         age: record.get('age').toNumber(),
         gender: record.get('gender'),
         photoURL: record.get('photoURL'),
@@ -53,37 +55,63 @@ export default class UserController{
     }
   };
 
+  
   public updateUser = async (req: Request, res: Response, next: NextFunction) => {   
     try {
       const session = this.db.session({ database: "neo4j" });
-      const { id, ...params } = req.body;
-      const existingUser = await session.run(`
-        MATCH (u:User {id: "${req.body.id}"})
-        RETURN u
-      `, { id });
-  
-      if (!existingUser.records.length) {
-        console.log('Sorry, No such user exists!');
-        return res.status(404).json({ status: 404, message: 'User not found' });
+      let username = null; 
+      if (req.body.hasOwnProperty('username')) {
+            username = req.body.username.toLowerCase();
       }
   
-      const setStatements = Object.entries(params).map(([key, value]) => `u.${key} = $${key}`);
+      // Encrypt the username in the update params
+      const paramsWithEncryptedFields = {
+          ...req.body,
+          ...(username && { username }),
+          ...Object.entries(req.body).reduce((acc, [key, value]) => {
+              if (key === 'username') {
+                  acc[key] = encrypt(username, process.env.SECRET_KEY);
+              }
+              return acc;
+          }, {})
+      };
+      
+      const existingUser = await session.run(`
+          MATCH (u:User {id: $id}) RETURN u
+      `, { id: req.body.id });
+  
+      if (!existingUser.records.length) {
+          return res.status(404).json({ status: 404, data: 'User not found, to update !' });
+      }
+  
+      const setStatements = Object.entries(paramsWithEncryptedFields).map(([key, value]) => {
+          if (key === 'username' || key === 'email') {
+              return `u.${key} = $${key}`;
+          } else {
+              return `u.${key} = '${value}'`;
+          }
+      });
+  
       const setQuery = setStatements.join(', ');
   
       const updateQuery = `
-        MATCH (u:User {id: "${req.body.id}"})
-        SET u.username = LOWER("${req.body.username}"), ${setQuery}
-        RETURN u.username AS username, u.age AS age, u. photoURL as photoURL, u.latitude AS latitude, u.longitude AS longitude, u.gender AS gender
+          MATCH (u:User {id: "${req.body.id}"})
+          SET ${setQuery}
+          RETURN u.username AS username, u.age AS age, u.photoURL AS photoURL, u.latitude AS latitude, u.longitude AS longitude, 
+          u.gender AS gender, u.email AS email, u.id AS id
       `;
   
-      const result = await session.run(updateQuery, { id, ...params });
+      const result = await session.run(updateQuery, paramsWithEncryptedFields);
+  
       const resultList = result.records.map(record => ({
-        username: record.get('username'),
-        age: record.get('age').toNumber(),
-        gender: record.get('gender'),
-        photoURL: record.get('photoURL'),
-        latitude: record.get('latitude'),
-        longitude: record.get('longitude')
+          username: decrypt(record.get('username'), process.env.SECRET_KEY),
+          age: record.get('age').toNumber(),
+          gender: record.get('gender'),
+          photoURL: record.get('photoURL'),
+          latitude: record.get('latitude'),
+          longitude: record.get('longitude'),
+          email: decrypt(record.get('email'), process.env.SECRET_KEY),
+          id: record.get('id')
       }));
   
       session.close();
@@ -94,22 +122,26 @@ export default class UserController{
     }
   };
   
+  
   public getUserBySessionId = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const session = this.db.session({ database: "neo4j" });
+
       const query = `
-        MATCH (n:User {id:"${req.body.id}"})-[r:HAS_INTEREST]->(n2:Activity)
-        RETURN n.id AS id, n.username AS username, n.email AS email, n.age AS age,
-          n.gender AS gender, n.photoURL AS photoURL,
-          n.latitude AS latitude, n.longitude AS longitude, COLLECT(DISTINCT n2.name) AS interests;
+        MATCH (n:User {id:"${req.body.id}"})
+        OPTIONAL MATCH (n)-[r:HAS_INTEREST]->(n2:Activity)
+        RETURN DISTINCT n.id AS id, n.username AS username, n.email AS email, n.age AS age,
+          n.gender AS gender, n.photoURL AS photoURL, n.latitude AS latitude, n.longitude AS longitude, 
+          COLLECT(DISTINCT n2.name) AS interests
+      
       `;
       const result = await session.run(query);
       if (result.records.length > 0) {
         const record = result.records[0];
         const data = {
           id: record.get('id'),
-          username: record.get('username'),
-          email: record.get('email'),
+          username: decrypt(record.get('username'),process.env.SECRET_KEY),
+          email: decrypt(record.get('email'),process.env.SECRET_KEY),
           age: record.get('age').toNumber(),
           gender: record.get('gender'),
           photoURL: record.get('photoURL'),
@@ -127,10 +159,12 @@ export default class UserController{
       return next(e);
     }
   };
+
   
   public isUserExists = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const session = this.db.session({ database: "neo4j" });
+    
       const query = `
       MATCH (n:User {id:"${req.body.id}"})
       RETURN n.id AS id;
@@ -147,48 +181,59 @@ export default class UserController{
       return next(e);
     }
   };
+
   
   public isUsernameExists = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const session = this.db.session({ database: "neo4j" });
+
       const query = `
-      MATCH (n:User {username:"${req.body.username}"})
-      RETURN n.id AS id;
+        MATCH (n:User) RETURN DISTINCT n.username as username;
     `;
-      const result = await session.run(query);
-      const record = result.records[0];
-      session.close();
-      if (record != null) {
-        return res.status(200).json({ status: 200, data: true });
-      }
-      return res.status(404).json({ status: 404, data: false });
-    } catch (e) {
-      debugError(e.toString());
-      return next(e);
-    }
-  };
+
+    const result = await session.run(query);
+    for (const record of result.records) {
+        const decryptedUsername = decrypt(record.get('username'), process.env.SECRET_KEY);
+             
+        
+        if (decryptedUsername === req.body.username.toLowerCase()) {
+            session.close();
+            return res.status(200).json({ status: 200, data: true });
+        }else{
+            session.close();
+            return res.status(409).json({status:409,data:false});
+        }};}catch(e){
+            debugError(e.toString());
+            return next(e);
+        }};
   
+
 
   public createUser= async (req: Request, res: Response, next: NextFunction) => {
     try {
       const session = this.db.session({ database: "neo4j" });
       const userInput = req.body;
-
+  
       // Check if all required properties are present
-      if (!userInput.id || !userInput.username || !userInput.email || !userInput.latitude || !userInput.longitude) {
+      if (!userInput.id || !userInput.username || !userInput.email) {
         return res.status(400).json({ error: "Missing required fields" });
       }
-
+  
+      // Encrypt the username, email, and id properties
+      const encryptedUsername = encrypt(userInput.username.toLowerCase(),process.env.SECRET_KEY);
+      const encryptedEmail = encrypt(userInput.email,process.env.SECRET_KEY);
+    
+  
       const checkEmailQuery = `
-      MATCH (u:User)
-      WHERE u.email = "${userInput.email}" OR u.id = "${userInput.id}"
-      RETURN DISTINCT u.username as username, u.email as email, u.age as age, u.gender as gender, u.photoURL as photoURL
+        MATCH (u:User)
+        WHERE u.id = "${userInput.id}"
+        RETURN DISTINCT u.username as username, u.email as email, u.age as age, u.gender as gender, u.photoURL as photoURL
     `;
       const emailResult = await session.run(checkEmailQuery);
       if (emailResult.records.length > 0) {
         const resultListEmail = emailResult.records.map(record => ({
-          username: record.get('username'),
-          email: record.get('email'),
+          username: decrypt(record.get('username'),process.env.SECRET_KEY),
+          email: decrypt(record.get('email'),process.env.SECRET_KEY),
           age: record.get('age').toNumber(),
           gender: record.get('gender'),
           photoURL: record.get('photoURL'),
@@ -201,22 +246,22 @@ export default class UserController{
       }
 
       const createQuery = `
-      CREATE (u:User {
-        id: "${userInput.id}",
-        username: "${userInput.username.toLowerCase()}",
-        email: "${userInput.email}",
-        photoURL: "${userInput.photoURL}",
-        gender: COALESCE("${userInput.gender}", "Unknown"),
-        age: COALESCE(${userInput.age}, 20),
-        latitude: ${userInput.latitude},
-        longitude: ${userInput.longitude}
-      })
-      RETURN u.username as username, u.age as age, u.email as email, u.photoURL as photoURL, u.gender as gender
+        CREATE (u:User {
+            id: "${userInput.id}",
+            username: "${encryptedUsername}",
+            email: "${encryptedEmail}",
+            photoURL: "${userInput.photoURL}",
+            gender: COALESCE("${userInput.gender}", "Unknown"),
+            age: COALESCE(${userInput.age}, 20),
+            latitude: ${userInput.latitude},
+            longitude: ${userInput.longitude}
+        })
+        RETURN u.username as username, u.age as age, u.email as email, u.photoURL as photoURL, u.gender as gender
     `;
       const createResult = await session.run(createQuery);
       const resultList = createResult.records.map(record => ({
-        username: record.get('username'),
-        email: record.get('email'),
+        username: decrypt(record.get('username'),process.env.SECRET_KEY),
+        email: decrypt(record.get('email'),process.env.SECRET_KEY),
         age: record.get('age').toNumber(),
         gender: record.get('gender'),
         photoURL: record.get('photoURL'),
@@ -228,11 +273,15 @@ export default class UserController{
       return next(e);
     }
   };
+  
+
+
 
 
   public deleteUser= async (req: Request, res: Response, next: NextFunction)=> {
     try {
       const session = this.db.session({ database: "neo4j" });
+
       const query = `
       MATCH (u:User {id: "${req.body.id}"})
       WITH u LIMIT 1
@@ -242,10 +291,11 @@ export default class UserController{
     `;
       const result = await session.run(query);
       const deleted = result.records[0].get("deleted").toNumber();
-      session.close();
       if (deleted === 0) {
+        session.close();
         return res.status(404).json({ status: 404, data: "User does not exist and cannot be deleted." });
       } else {
+        session.close();
         return res.status(201).json({ status: 201, data: "User Profile Deleted Successfully !" });
       }
     } catch (e) {
@@ -261,6 +311,7 @@ export default class UserController{
       const max: number = +req.query.max || 10;
       const offset: number = +req.query.offset || 0;
       const skip: number = offset * max;
+    
 
       const query = `
       MATCH (u:User)
@@ -286,8 +337,8 @@ export default class UserController{
       const result = await session.run(query);
       if (result.records.length > 0) {
         const resultList = result.records.map(record => ({
-          username: record.get('username'),
-          email: record.get('email'),
+          username: decrypt(record.get('username'),process.env.SECRET_KEY),
+          email: decrypt(record.get('email'),process.env.SECRET_KEY),
           age: record.get('age').toNumber(),
           gender: record.get('gender'),
           photoURL: record.get('photoURL'),
@@ -297,6 +348,7 @@ export default class UserController{
         session.close();
         return res.status(200).json({ status: 200, data: resultList });
       } else {
+        session.close();
         return res.status(404).json({ status: 404, data: [] });
       }
     } catch (e) {
@@ -312,6 +364,7 @@ export default class UserController{
       const max: number = +req.query.max || 10;
       const offset: number = +req.query.offset || 0;
       const skip: number = offset * max;
+
 
       const query = `
       MATCH (u:User)-[:HAS_INTEREST]->(s:Activity)<-[:HAS_INTEREST]-(u2:User)
@@ -337,8 +390,8 @@ export default class UserController{
       const result = await session.run(query);
       if (result.records.length > 0) {
         const resultList = result.records.map(record => ({
-          username: record.get('username'),
-          email: record.get('email'),
+          username: decrypt(record.get('username'),process.env.SECRET_KEY),
+          email: decrypt(record.get('email'),process.env.SECRET_KEY),
           age: record.get('age').toNumber(),
           gender: record.get('gender'),
           photoURL: record.get('photoURL'),
@@ -348,6 +401,7 @@ export default class UserController{
         session.close();
         return res.status(200).json({ status: 200, data: resultList });
       } else {
+        session.close();
         return res.status(404).json({ status: 404, data: [] });
       }
     } catch (e) {
@@ -363,6 +417,7 @@ export default class UserController{
       const max: number = +req.query.max || 10;
       const offset: number = +req.query.offset || 0;
       const skip: number = offset * max;
+
 
       const query = `
       MATCH (u:User)-[:HAS_INTEREST]->(s:Activity)
@@ -394,8 +449,8 @@ export default class UserController{
       const result = await session.run(query);
       if (result.records.length > 0) {
         const resultList = result.records.map(record => ({
-          username: record.get('username'),
-          email: record.get('email'),
+          username: decrypt(record.get('username'),process.env.SECRET_KEY),
+          email: decrypt(record.get('email'),process.env.SECRET_KEY),
           age: record.get('age').toNumber(),
           gender: record.get('gender'),
           photoURL: record.get('photoURL'),
@@ -407,6 +462,7 @@ export default class UserController{
         session.close();
         return res.status(200).json({ status: 200, data: resultList });
       } else {
+        session.close();
         return res.status(404).json({ status: 404, data: [] });
       }
     } catch (e) {
@@ -420,6 +476,8 @@ export default class UserController{
     try {
       const session = this.db.session({ database: "neo4j" });
       const skills = req.body.skills.map(skill => `"${skill}"`).join(', ');
+
+
       const query = `
       WITH [${skills}] AS skillsList
       UNWIND skillsList AS skill
@@ -443,6 +501,8 @@ export default class UserController{
     try {
       const session = this.db.session({ database: "neo4j" });
       const interests = req.body.interests.map(interest => `"${interest}"`).join(', ');
+
+
       const query = `
       WITH [${interests}] AS interestsList
       UNWIND interestsList AS interest
@@ -465,15 +525,17 @@ export default class UserController{
   public interestsUser = async (req: Request, res: Response, next: NextFunction)=> {
     try {
       const session = this.db.session({ database: "neo4j" });
+
       const query2 = `
       MATCH (n:User{id:"${req.body.id}"})-[r:HAS_INTEREST]->(n2:Activity)
       RETURN COLLECT(DISTINCT n2.name) AS interest
     `;
       const result2 = await session.run(query2);
-      session.close();
       if (result2.records.length > 0) {
+        session.close();
         return res.status(200).json({ status: 200, data: result2.records[0]["_fields"][0] });
       } else {
+        session.close();
         return res.status(404).json({ status: 404, data: [] });
       }
     } catch (e) {
@@ -482,27 +544,30 @@ export default class UserController{
     }
   };
 
+
   public returnInterests = async (req: Request, res: Response, next: NextFunction)=> {
     try {
       const session = this.db.session({ database: "neo4j" });
+
       const query1 = `
       MATCH (n:User{id:"${req.body.id}"})
       RETURN n.id AS id
     `;
       const result1 = await session.run(query1);
       if (result1.records.length === 0) {
-        return res.status(404).json({ status: 404, message: "Sorry, no user with the given ID exists." });
+        return res.status(404).json({ status: 404, data: "Sorry, no user with the given ID exists." });
       }
       const query2 = `
       MATCH (n:User{id:"${req.body.id}"})-[r:HAS_INTEREST]->(n2:Activity)
       RETURN COLLECT(DISTINCT n2.name) AS interests
     `;
       const result2 = await session.run(query2);
-      session.close();
       if (result2.records.length > 0) {
         const interests = result2.records[0].get('interests');
+        session.close();
         return res.status(200).json({ status: 200, data: interests });
       } else {
+        session.close();
         return res.status(404).json({ status: 404, data: [] });
       }
     } catch (e) {
@@ -517,6 +582,7 @@ export default class UserController{
     try {
       const session = this.db.session({ database: "neo4j" });
       const interests = req.body.interests.map(interest => `"${interest}"`).join(', ');
+
       const interestQuery = `
           WITH [${interests}] AS interestsList
           UNWIND interestsList AS interest
@@ -529,7 +595,6 @@ export default class UserController{
       const result = await session.run(interestQuery);
       if (result.records.length > 0){
         const resultList = result.records.map(record => ({
-          id: record.get('id'),
           interests: record.get('interests')
         }));
         session.close();
@@ -563,7 +628,7 @@ export default class UserController{
       const result = await session.run(fetchQuery, params);
       if (result.records.length > 0){
         const resultList = result.records.map(record => ({
-          username : record.get('username'),
+          username : decrypt(record.get('username'),process.env.SECRET_KEY),
           photoURL: record.get('photoURL'),
           age: record.get('age').toNumber(),
           gender: record.get('gender')
@@ -583,7 +648,8 @@ export default class UserController{
   public getUsersByIds = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const session = this.db.session({ database: "neo4j" });
-        const idList = req.body.id; 
+
+        const idList = req.body.idList; 
         const users = [];
         for (const id of idList) {
             const query = `
@@ -594,11 +660,11 @@ export default class UserController{
             if (result.records.length > 0) {
                 const user = result.records[0];
                 users.push({
-                    username: user.get('username'),
+                    username: decrypt(user.get('username'),process.env.SECRET_KEY),
                     photoURL: user.get('photoURL'),
                     age: user.get('age').toNumber(),
                     gender: user.get('gender'),
-                    email: user.get('email')
+                    email: decrypt(user.get('email'),process.env.SECRET_KEY)
                 });
             }
         }
