@@ -3,20 +3,20 @@ import { Driver } from "neo4j-driver";
 import debugError from '../../services/debug_error';
 
 
-export default class UserController{
+export default class UserController {
   private db: Driver;
   constructor(
     db: Driver
-  ){
+  ) {
     this.db = db;
   }
 
-  
+
   public test = async (req: Request, res: Response, next: NextFunction) => {
     return res.status(200).json({ status: 200, data: "User Routes Working!" });
   };
 
-  public getAllUsers = async (req: Request, res: Response, next: NextFunction) => {     
+  public getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const session = this.db.session({ database: "neo4j" });
       const max: number = +req.query.max || 10;
@@ -43,7 +43,7 @@ export default class UserController{
         latitude: record.get('latitude'),
         longitude: record.get('longitude')
       }));
-      
+
       session.close();
       return res.status(200).json({ status: 200, data: resultList });
 
@@ -53,7 +53,7 @@ export default class UserController{
     }
   };
 
-  public updateUser = async (req: Request, res: Response, next: NextFunction) => {   
+  public updateUser = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const session = this.db.session({ database: "neo4j" });
       const { id, ...params } = req.body;
@@ -61,21 +61,21 @@ export default class UserController{
         MATCH (u:User {id: "${req.body.id}"})
         RETURN u
       `, { id });
-  
+
       if (!existingUser.records.length) {
         console.log('Sorry, No such user exists!');
         return res.status(404).json({ status: 404, message: 'User not found' });
       }
-  
+
       const setStatements = Object.entries(params).map(([key, value]) => `u.${key} = $${key}`);
       const setQuery = setStatements.join(', ');
-  
+
       const updateQuery = `
         MATCH (u:User {id: "${req.body.id}"})
-        SET u.username = LOWER("${req.body.username}"), ${setQuery}
+        SET ${setQuery}
         RETURN u.username AS username, u.age AS age, u. photoURL as photoURL, u.latitude AS latitude, u.longitude AS longitude, u.gender AS gender
       `;
-  
+
       const result = await session.run(updateQuery, { id, ...params });
       const resultList = result.records.map(record => ({
         username: record.get('username'),
@@ -85,7 +85,7 @@ export default class UserController{
         latitude: record.get('latitude'),
         longitude: record.get('longitude')
       }));
-  
+
       session.close();
       return res.status(200).json({ status: 200, data: resultList });
     } catch (e) {
@@ -93,7 +93,7 @@ export default class UserController{
       return next(e);
     }
   };
-  
+
   public getUserBySessionId = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const session = this.db.session({ database: "neo4j" });
@@ -127,7 +127,7 @@ export default class UserController{
       return next(e);
     }
   };
-  
+
   public isUserExists = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const session = this.db.session({ database: "neo4j" });
@@ -147,7 +147,7 @@ export default class UserController{
       return next(e);
     }
   };
-  
+
   public isUsernameExists = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const session = this.db.session({ database: "neo4j" });
@@ -167,9 +167,9 @@ export default class UserController{
       return next(e);
     }
   };
-  
 
-  public createUser= async (req: Request, res: Response, next: NextFunction) => {
+
+  public createUser = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const session = this.db.session({ database: "neo4j" });
       const userInput = req.body;
@@ -230,7 +230,7 @@ export default class UserController{
   };
 
 
-  public deleteUser= async (req: Request, res: Response, next: NextFunction)=> {
+  public deleteUser = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const session = this.db.session({ database: "neo4j" });
       const query = `
@@ -255,7 +255,7 @@ export default class UserController{
   };
 
 
-  public locRecommend = async (req: Request, res: Response, next: NextFunction) =>{
+  public locRecommend = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const session = this.db.session({ database: "neo4j" });
       const max: number = +req.query.max || 10;
@@ -306,7 +306,7 @@ export default class UserController{
   };
 
 
-  public recommendUser= async(req: Request, res: Response, next: NextFunction) =>{
+  public recommendUser = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const session = this.db.session({ database: "neo4j" });
       const max: number = +req.query.max || 10;
@@ -357,7 +357,7 @@ export default class UserController{
 
   };
 
-  public compatibleUsers= async (req: Request, res: Response, next: NextFunction)=> {
+  public compatibleUsers = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const session = this.db.session({ database: "neo4j" });
       const max: number = +req.query.max || 10;
@@ -416,7 +416,7 @@ export default class UserController{
   };
 
 
-  public createSkills = async (req: Request, res: Response, next: NextFunction) =>{
+  public createSkills = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const session = this.db.session({ database: "neo4j" });
       const skills = req.body.skills.map(skill => `"${skill}"`).join(', ');
@@ -439,7 +439,7 @@ export default class UserController{
   };
 
 
-  public createInterests = async (req: Request, res: Response, next: NextFunction) =>{
+  public createInterests = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const session = this.db.session({ database: "neo4j" });
       const interests = req.body.interests.map(interest => `"${interest}"`).join(', ');
@@ -462,7 +462,7 @@ export default class UserController{
   };
 
 
-  public interestsUser = async (req: Request, res: Response, next: NextFunction)=> {
+  public interestsUser = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const session = this.db.session({ database: "neo4j" });
       const query2 = `
@@ -482,7 +482,7 @@ export default class UserController{
     }
   };
 
-  public returnInterests = async (req: Request, res: Response, next: NextFunction)=> {
+  public returnInterests = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const session = this.db.session({ database: "neo4j" });
       const query1 = `
@@ -513,7 +513,7 @@ export default class UserController{
 
 
 
-  public updateInterests = async (req: Request, res: Response, next: NextFunction)  =>{
+  public updateInterests = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const session = this.db.session({ database: "neo4j" });
       const interests = req.body.interests.map(interest => `"${interest}"`).join(', ');
@@ -527,7 +527,7 @@ export default class UserController{
           RETURN u.id AS id, collect(s.name) AS interests
       `;
       const result = await session.run(interestQuery);
-      if (result.records.length > 0){
+      if (result.records.length > 0) {
         const resultList = result.records.map(record => ({
           id: record.get('id'),
           interests: record.get('interests')
@@ -541,7 +541,7 @@ export default class UserController{
     }
   };
 
-  public custom_fetch = async (req: Request, res: Response, next: NextFunction)  =>{
+  public custom_fetch = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const session = this.db.session({ database: "neo4j" });
 
@@ -561,9 +561,9 @@ export default class UserController{
         interests: req.body.interests || '',
       };
       const result = await session.run(fetchQuery, params);
-      if (result.records.length > 0){
+      if (result.records.length > 0) {
         const resultList = result.records.map(record => ({
-          username : record.get('username'),
+          username: record.get('username'),
           photoURL: record.get('photoURL'),
           age: record.get('age').toNumber(),
           gender: record.get('gender')
@@ -582,34 +582,35 @@ export default class UserController{
 
   public getUsersByIds = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const session = this.db.session({ database: "neo4j" });
-        const idList = req.body.id; 
-        const users = [];
-        for (const id of idList) {
-            const query = `
+      const session = this.db.session({ database: "neo4j" });
+      const idList = req.body.id;
+      const users = [];
+      for (const id of idList) {
+        const query = `
                 MATCH (n:User{id:"${id}"})
                 RETURN n.username AS username, n.photoURL AS photoURL, n.age AS age, n.gender AS gender, n.email AS email
             `;
-            const result = await session.run(query);
-            if (result.records.length > 0) {
-                const user = result.records[0];
-                users.push({
-                    username: user.get('username'),
-                    photoURL: user.get('photoURL'),
-                    age: user.get('age').toNumber(),
-                    gender: user.get('gender'),
-                    email: user.get('email')
-                });
-            }
+        const result = await session.run(query);
+        if (result.records.length > 0) {
+          const user = result.records[0];
+          users.push({
+            id: id,
+            username: user.get('username'),
+            photoURL: user.get('photoURL'),
+            age: user.get('age').toNumber(),
+            gender: user.get('gender'),
+            email: user.get('email')
+          });
         }
-        session.close();
-        if(users.length < 1){
-          return res.status(404).json({status: 200, data: []});
-        }
-        return res.status(200).json({ status: 200, data: users });
+      }
+      session.close();
+      if (users.length < 1) {
+        return res.status(404).json({ status: 200, data: [] });
+      }
+      return res.status(200).json({ status: 200, data: users });
     } catch (e) {
-        debugError(e.toString());
-        return next(e);
+      debugError(e.toString());
+      return next(e);
     }
   };
 }

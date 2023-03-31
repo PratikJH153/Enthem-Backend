@@ -14,14 +14,16 @@ export default (app) => {
     console.log("Backend Connected");
     var roomID: string;
 
-    socket.on('disconnect', async (memberID) => {
-      console.log("User removed");
+    socket.on('removeMember', async (data) => {
+      console.log("asdasdasd" + data);
+      const {roomID, memberID} = data;
       console.log(await roomService.removeMember(roomID, memberID));
+      socket.leave(roomID);
+      console.log("User removed");
     })
 
-    socket.on('disconnect', async () => {
+    socket.on('disconnect', async (roomID, memberID) => {
       console.log("User Disconnected");
-      socket.leave(roomID);
     })
 
     socket.on("sendMsg", (msg) => {
