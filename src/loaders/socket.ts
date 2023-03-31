@@ -15,8 +15,9 @@ export default (app) => {
   io.on("connection", (socket) => {
     console.log("Backend Connected");
     var roomID: string;
+    var memberID:string;
 
-    socket.on('disconnect', async (memberID) => {
+    socket.on('disconnect', async () => {
       console.log("User removed");
       console.log(await roomService.removeMember(roomID, memberID));
     })
@@ -83,7 +84,7 @@ export default (app) => {
     socket.on("removeMember", async (data) => {
       try {
         const { roomID, memberID, ownerID } = data;
-        await roomService.removeMember(roomID, memberID);
+        await roomService.removeMember(roomID, memberID,ownerID);
         socket.to(roomID).emit("user removed by Admin", { memberID });
       } catch (error) {
         console.log(error);

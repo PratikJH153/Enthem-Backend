@@ -1,6 +1,7 @@
 import { Service, Inject } from 'typedi';
 import { IRoom } from '../interfaces/IRoom';
 import { startSession } from 'mongoose';
+import { ObjectId } from 'mongodb';
 
 @Service()
 export default class RoomService {
@@ -102,9 +103,10 @@ export default class RoomService {
 
   public async removeMember(roomID: string, memberID: string): Promise<any> {
     try {
+      const objectId = new ObjectId(roomID);
 
       const updatedRoom = await this.room.findOneAndUpdate(
-        { _id: roomID },
+        { _id: objectId, owner: memberID },
         { $pull: { memberlist: { memberId: memberID } } },
       );
 
@@ -117,4 +119,6 @@ export default class RoomService {
       throw new Error(err);
     }
   }
+
+  
 }
