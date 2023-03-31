@@ -17,10 +17,10 @@ export default (app) => {
     var roomID: string;
     var memberID:string;
 
-    socket.on('disconnect', async () => {
-      console.log("User removed");
-      console.log(await roomService.removeMember(roomID, memberID));
-    })
+    // socket.on('disconnect', async () => {
+    //   console.log("User removed");
+    //   console.log(await roomService.removeMember(roomID, memberID));
+    // })
 
     socket.on('disconnect', async () => {
       console.log("User Disconnected");
@@ -81,15 +81,26 @@ export default (app) => {
     });
 
     //remove member from chat room by Admin(owner)
+    socket.on('disconnect', async () => {
+      console.log("User removed");
+      try {
+        const data = await roomService.removeMember(roomID, socket.id);
+        socket.to(roomID).emit("user removed", { memberID: socket.id });
+      } catch (error) {
+        console.log(error);
+      }
+    });
+
     socket.on("removeMember", async (data) => {
       try {
-        const { roomID, memberID, ownerID } = data;
-        await roomService.removeMember(roomID, memberID,ownerID);
+        const { roomID, memberID} = data;
+        await roomService.removeMember(roomID, memberID);
         socket.to(roomID).emit("user removed by Admin", { memberID });
       } catch (error) {
         console.log(error);
       }
     });
+
     
     
   });
