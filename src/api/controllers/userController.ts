@@ -72,11 +72,7 @@ export default class UserController {
 
       const updateQuery = `
         MATCH (u:User {id: "${req.body.id}"})
-<<<<<<< HEAD
         SET ${setQuery}
-=======
-        SET u.username = ("${req.body.username}"), ${setQuery}
->>>>>>> topic/yash/rooms
         RETURN u.username AS username, u.age AS age, u. photoURL as photoURL, u.latitude AS latitude, u.longitude AS longitude, u.gender AS gender
       `;
 
