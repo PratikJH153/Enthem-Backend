@@ -114,15 +114,8 @@ export default class RoomService {
 
   public async removeMember(roomID: string, memberID: string): Promise<any> {
     try {
-<<<<<<< HEAD
       const updatedRoom = await this.room.findByIdAndUpdate(
         roomID,
-=======
-      const objectId = new ObjectId(roomID);
-
-      const updatedRoom = await this.room.findOneAndUpdate(
-        { _id: objectId, owner: memberID },
->>>>>>> topic/yash/rooms
         { $pull: { memberlist: { memberId: memberID } } },
       );
 

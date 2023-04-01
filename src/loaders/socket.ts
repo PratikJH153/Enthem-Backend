@@ -17,7 +17,6 @@ export default (app) => {
     var roomID: string;
     var memberID:string;
 
-<<<<<<< HEAD
     socket.on('removeMember', async (data) => {
       console.log("asdasdasd" + data);
       const {roomID, memberID} = data;
@@ -25,12 +24,6 @@ export default (app) => {
       socket.leave(roomID);
       console.log("User removed");
     })
-=======
-    // socket.on('disconnect', async () => {
-    //   console.log("User removed");
-    //   console.log(await roomService.removeMember(roomID, memberID));
-    // })
->>>>>>> topic/yash/rooms
 
     socket.on('disconnect', async (roomID, memberID) => {
       console.log("User Disconnected");
