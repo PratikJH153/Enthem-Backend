@@ -181,7 +181,7 @@ export default class UserController {
 
       const checkEmailQuery = `
       MATCH (u:User)
-      WHERE u.email = "${userInput.email}" OR u.id = "${userInput.id}"
+      WHERE u.id = "${userInput.id}"
       RETURN DISTINCT u.username as username, u.email as email, u.age as age, u.gender as gender, u.photoURL as photoURL
     `;
       const emailResult = await session.run(checkEmailQuery);
