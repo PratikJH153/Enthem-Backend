@@ -51,6 +51,17 @@ export default class RoomService {
 
   }
 
+  public async getRoomsByOwnerID(ownerID: string): Promise<any>{
+    try{
+      const data = await this.room.find({ownerID: ownerID});
+      return {
+        data: data
+      }
+    } catch(err){
+      throw new Error(err);
+    }
+  }
+
 
   public async addRoom(roomData: Map<String, Object>): Promise<any> {
     try {
@@ -102,9 +113,8 @@ export default class RoomService {
 
   public async removeMember(roomID: string, memberID: string): Promise<any> {
     try {
-
-      const updatedRoom = await this.room.findOneAndUpdate(
-        { _id: roomID },
+      const updatedRoom = await this.room.findByIdAndUpdate(
+        roomID,
         { $pull: { memberlist: { memberId: memberID } } },
       );
 
