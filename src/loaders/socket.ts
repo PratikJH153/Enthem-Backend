@@ -32,8 +32,8 @@ export default (app) => {
     //encryption and decryption in messages
     socket.on("sendMsg", (msg) => {
       console.log("Message received!", msg);
-      const receiverChatID = msg.receiverChatID;
-      const senderChatID = msg.senderChatID;
+      const receiverChatID = encrypt(msg.receiverChatID, config.secretKEY);
+      const senderChatID = encrypt(msg.senderChatID, config.secretKEY);
       const content = encrypt(msg.content, config.secretKEY); // Encrypt the message content using the secret key
       const encryptedMsg = {
         content: content,
@@ -42,20 +42,6 @@ export default (app) => {
       };
       socket.broadcast.in(receiverChatID).emit("sendMsgServer", encryptedMsg);
     });
-
-    socket.on("receiveMsg", (msg) => {
-      console.log("Encrypted message received!", msg);
-      const receiverChatID = msg.receiverChatID;
-      const senderChatID = msg.senderChatID;
-      const content = decrypt(msg.content, config.secretKEY); // Decrypt the message content using the secret key
-      const decryptedMsg = {
-        content: content,
-        senderChatID: senderChatID,
-        receiverChatID: receiverChatID,
-      };
-      socket.broadcast.in(receiverChatID).emit("receiveMsgServer", decryptedMsg);
-    });
-
 
     //delete chat room
     socket.on("deleteRoom", async (data) => {
