@@ -53,10 +53,27 @@ export default class UserController {
     }
   };
 
+  
   public updateUser = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const session = this.db.session({ database: "neo4j" });
       const { id, ...params } = req.body;
+
+      if (params.hasOwnProperty('username')) {
+        const username = params.username.toLowerCase();
+        const usernameCheckQuery = `
+          MATCH (u:User)
+          WHERE toLower(u.username) = $username AND NOT id(u) = $id
+          RETURN u.username AS username
+        `;
+        const usernameCheckResult = await session.run(usernameCheckQuery, { username, id });
+
+        if (usernameCheckResult.records.length > 0) {
+          console.log('Sorry, Same username exists!');
+          return res.status(400).json({ status: 400, data: 'Username already exists' });
+        }
+      }
+
       const existingUser = await session.run(`
         MATCH (u:User {id: "${req.body.id}"})
         RETURN u
@@ -64,7 +81,7 @@ export default class UserController {
 
       if (!existingUser.records.length) {
         console.log('Sorry, No such user exists!');
-        return res.status(404).json({ status: 404, message: 'User not found' });
+        return res.status(404).json({ status: 404, data: 'User not found' });
       }
 
       const setStatements = Object.entries(params).map(([key, value]) => `u.${key} = $${key}`);
@@ -73,7 +90,7 @@ export default class UserController {
       const updateQuery = `
         MATCH (u:User {id: "${req.body.id}"})
         SET u.username = ("${req.body.username}"), ${setQuery}
-        RETURN u.username AS username, u.age AS age, u. photoURL as photoURL, u.latitude AS latitude, u.longitude AS longitude, u.gender AS gender
+        RETURN u.username AS username, u.age AS age, u.photoURL as photoURL, u.latitude AS latitude, u.longitude AS longitude, u.gender AS gender
       `;
 
       const result = await session.run(updateQuery, { id, ...params });
@@ -92,7 +109,10 @@ export default class UserController {
       debugError(e.toString());
       return next(e);
     }
-  };
+};
+
+
+
 
   public getUserBySessionId = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -152,7 +172,7 @@ export default class UserController {
     try {
       const session = this.db.session({ database: "neo4j" });
       const query = `
-      MATCH (n:User {username:"${req.body.username}"})
+      MATCH (n:User {username: toLower("${req.body.username}")})
       RETURN n.id AS id;
     `;
       const result = await session.run(query);
@@ -169,7 +189,9 @@ export default class UserController {
   };
 
 
+
   public createUser = async (req: Request, res: Response, next: NextFunction) => {
+
     try {
       const session = this.db.session({ database: "neo4j" });
       const userInput = req.body;
