@@ -1,7 +1,6 @@
 import { Service, Inject } from 'typedi';
 import { IRoom } from '../interfaces/IRoom';
 import { startSession } from 'mongoose';
-import { ObjectId } from 'mongodb';
 
 @Service()
 export default class RoomService {
@@ -128,6 +127,4 @@ export default class RoomService {
       throw new Error(err);
     }
   }
-
-  
 }
