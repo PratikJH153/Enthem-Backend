@@ -95,4 +95,21 @@ export default class RoomController {
       return res.status(500).json({ status: 500, data: "Server error" });
     }
   };
+
+  public searchRoom = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const title = req.body.title;
+      if (!title) {
+        return res.status(400).json({ status: 400, data: "Title query parameter is required" });
+      }
+      const data = await this.roomService.searchRoom(title);
+      return res.status(200).json({ status: 200, data: data["data"] });
+    } catch (error) {
+      debugError(error.toString());
+      return res.status(500).json({ status: 500, data: "Server error" });
+    }
+  };
+  
+  
+  
 };

@@ -119,6 +119,23 @@ export default class RoomService {
       throw new Error(err);
     }
   }
+  
+  public async searchRoom(substring: string): Promise<any> {
+    try {
+      const rooms = await this.room.find({
+        $or: [
+          { title: { $regex: substring, $options: 'i' } },
+          { description: { $regex: substring, $options: 'i' } }
+        ]
+      });
+  
+      return { data: rooms };
+    } catch (err) {
+      throw new Error(err);
+    }
+  }
+  
+  
 
   
 }
