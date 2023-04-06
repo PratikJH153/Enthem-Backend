@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import RoomService from '../../services/room_service';
 import { Container, Service } from 'typedi';
 import debugError from '../../services/debug_error';
+import {kProductionMode} from "../../constants/production_mode";
 
 
 @Service()
@@ -25,7 +26,7 @@ export default class RoomController {
       }
     } catch (error) {
       debugError(error.toString());
-      return res.status(500).json({ status: 500, data: [] });
+      return res.status(500).json({ status: 500, data: kProductionMode?[]: error.toString() });
     }
   };
 
@@ -38,7 +39,7 @@ export default class RoomController {
       return res.status(404).json({ status: 404, data: "Room not found!" });
     } catch (error) {
       debugError(error.toString());
-      return res.status(500).json({ status: 500, data: [] });
+      return res.status(500).json({ status: 500, data: kProductionMode?[]: error.toString()});
     }
   };
 
@@ -51,7 +52,7 @@ export default class RoomController {
       return res.status(404).json({ status: 404, data: [] });
     } catch(err){
       debugError(err.toString());
-      return res.status(500).json({status: 500, datat: []});
+      return res.status(500).json({ status: 500, data: kProductionMode?[]: err.toString() });
     }
   }
 
@@ -72,7 +73,7 @@ export default class RoomController {
       return res.status(200).json({ status: 200, data: data["data"] });
     } catch (error) {
       debugError(error.toString());
-      return res.status(500).json({ status: 500, data: "Server Issue" });
+      return res.status(500).json({ status: 500, data: error.toString() });
     }
   };
 
@@ -83,7 +84,7 @@ export default class RoomController {
       return res.status(data["status"]).json({ status: data["status"], data: data["data"] });
     } catch (error) {
       debugError(error.toString());
-      return res.status(500).json({ message: "Server error" });
+      return res.status(500).json({ status: 500, data: error.toString() });
     }
   };
 
@@ -94,7 +95,7 @@ export default class RoomController {
       return res.status(data["status"]).json({ status: data["status"], data: data["data"] });
     } catch (error) {
       debugError(error.toString());
-      return res.status(500).json({ message: "Server error" });
+      return res.status(500).json({ status: 500, data: error.toString() });
     }
   };
 
@@ -105,7 +106,7 @@ export default class RoomController {
       return res.status(200).json({ status: 200, data: data["data"] });
     } catch (error) {
       debugError(error.toString());
-      return res.status(500).json({ status: 500, data: "Server error" });
+      return res.status(500).json({ status: 500, data: error.toString() });
     }
   };
 };
