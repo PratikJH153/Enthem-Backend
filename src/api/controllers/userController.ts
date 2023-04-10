@@ -53,10 +53,27 @@ export default class UserController {
     }
   };
 
+  
   public updateUser = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const session = this.db.session({ database: "neo4j" });
       const { id, ...params } = req.body;
+
+      if (params.hasOwnProperty('username')) {
+        const username = params.username.toLowerCase();
+        const usernameCheckQuery = `
+          MATCH (u:User)
+          WHERE toLower(u.username) = $username AND NOT id(u) = $id
+          RETURN u.username AS username
+        `;
+        const usernameCheckResult = await session.run(usernameCheckQuery, { username, id });
+
+        if (usernameCheckResult.records.length > 0) {
+          console.log('Sorry, Same username exists!');
+          return res.status(400).json({ status: 400, data: 'Username already exists' });
+        }
+      }
+
       const existingUser = await session.run(`
         MATCH (u:User {id: "${req.body.id}"})
         RETURN u
@@ -64,7 +81,7 @@ export default class UserController {
 
       if (!existingUser.records.length) {
         console.log('Sorry, No such user exists!');
-        return res.status(404).json({ status: 404, message: 'User not found' });
+        return res.status(404).json({ status: 404, data: 'User not found' });
       }
 
       const setStatements = Object.entries(params).map(([key, value]) => `u.${key} = $${key}`);
@@ -92,7 +109,10 @@ export default class UserController {
       debugError(e.toString());
       return next(e);
     }
-  };
+};
+
+
+
 
   public getUserBySessionId = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -152,7 +172,7 @@ export default class UserController {
     try {
       const session = this.db.session({ database: "neo4j" });
       const query = `
-      MATCH (n:User {username:"${req.body.username}"})
+      MATCH (n:User {username: toLower("${req.body.username}")})
       RETURN n.id AS id;
     `;
       const result = await session.run(query);
@@ -169,7 +189,9 @@ export default class UserController {
   };
 
 
+
   public createUser = async (req: Request, res: Response, next: NextFunction) => {
+
     try {
       const session = this.db.session({ database: "neo4j" });
       const userInput = req.body;
@@ -316,22 +338,22 @@ export default class UserController {
       const query = `
       MATCH (u:User)-[:HAS_INTEREST]->(s:Activity)<-[:HAS_INTEREST]-(u2:User)
       WHERE u.id = "${req.body.id}"
-      AND u.latitude IS NOT NULL AND u.longitude IS NOT NULL 
-      AND u2.id <> u.id 
-      AND u2.latitude IS NOT NULL AND u2.longitude IS NOT NULL 
+        AND u.latitude IS NOT NULL AND u.longitude IS NOT NULL 
+        AND u2.id <> u.id 
+        AND u2.latitude IS NOT NULL AND u2.longitude IS NOT NULL 
       WITH u, u2, s, u.latitude * pi() / 180 AS lat1, u.longitude * pi() / 180 AS lon1,
           u2.latitude * pi() / 180 AS lat2, u2.longitude * pi() / 180 AS lon2,
-          6371 * 2 AS r 
+          3959 AS r
       WITH u, u2, s, lat1, lon1, lat2, lon2, r,
-          sin((lat2 - lat1) / 2) AS a,
-          sin((lon2 - lon1) / 2) AS b,
-          cos(lat1) AS c,
-          cos(lat2) AS d
-      WITH u, u2, s, r * asin(sqrt(a^2 + c * d * b^2)) AS distance
-      WHERE distance <=10000
-      RETURN DISTINCT u2.username as username, u2.email as email, 
-      u2.gender as gender, u2.age as age, u2.latitude as latitude, u2.longitude as longitude, u2.photoURL as photoURL
+          sin((lat2 - lat1) / 2) ^ 2 + cos(lat1) * cos(lat2) * sin((lon2 - lon1) / 2) ^ 2 AS a
+      WITH u, u2, s, r * 2 * atan2(sqrt(a), sqrt(1 - a)) AS distance
+      WHERE distance <= 10000
+      RETURN DISTINCT u2.username AS username, u2.email AS email, 
+            u2.gender AS gender, u2.age AS age, u2.latitude AS latitude, u2.longitude AS longitude, 
+            u2.photoURL AS photoURL, distance
+      ORDER BY distance ASC
       SKIP ${skip} LIMIT ${max}
+
     `;
 
       const result = await session.run(query);
@@ -382,13 +404,15 @@ export default class UserController {
       WITH u, u2, common_interests,
         toFloat(size(common_interests)) / u_interests AS u_similarity,
         toFloat(size(common_interests)) / u2_interests AS u2_similarity,
-        round(6371 * acos(sin(u_lat) * sin(u2_lat) + cos(u_lat) * cos(u2_lat) * cos(u2_lon - u_lon)) * 0.621371, 2) AS distance_in_miles
+        6371 * acos(sin(u_lat) * sin(u2_lat) + cos(u_lat) * cos(u2_lat) * cos(u2_lon - u_lon)) * 0.621371 AS distance_in_miles
       RETURN u2.username AS username, u2.email AS email, u2.age AS age, u2.gender AS gender, u2.latitude AS latitude, 
         u2.longitude AS longitude, u2.photoURL AS photoURL, 
         toInteger(((u_similarity + u2_similarity) / 2) * 100) AS match_percentage,
         distance_in_miles
       ORDER BY match_percentage DESC
-      SKIP ${skip} LIMIT ${max}    
+      SKIP ${skip} LIMIT ${max}
+
+    
     `;
 
       const result = await session.run(query);
