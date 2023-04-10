@@ -14,6 +14,7 @@ export default (app: Router) => {
   route.get('/all', checkAuth, roomController.getAllRooms);
   route.get('/', checkAuth, roomController.getRoom);
   route.get('/owner', checkAuth, roomController.getRoomsByOwnerID);
+  route.get('/searchRoom',checkAuth,roomController.searchRoom);
 
   //* POST CALLS
   route.post('/', checkAuth, roomController.addRoom);
