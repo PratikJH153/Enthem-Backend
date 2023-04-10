@@ -3,7 +3,6 @@ import RoomService from '../../services/room_service';
 import { Container, Service } from 'typedi';
 import debugError from '../../services/debug_error';
 
-
 @Service()
 export default class RoomController {
   roomService: RoomService;
@@ -41,6 +40,19 @@ export default class RoomController {
       return res.status(500).json({ status: 500, data: [] });
     }
   };
+
+  public getRoomsByOwnerID = async (req: Request, res: Response, next:NextFunction) => {
+    try{
+      const data = await this.roomService.getRoomsByOwnerID(req.body.ownerID);
+      if (data["data"]){
+        return res.status(200).json({ status: 200, data: data["data"] });
+      }
+      return res.status(404).json({ status: 404, data: [] });
+    } catch(err){
+      debugError(err.toString());
+      return res.status(500).json({status: 500, datat: []});
+    }
+  }
 
   public addRoom = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -87,12 +99,12 @@ export default class RoomController {
 
   public removeMember = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { roomID, memberID, owner } = req.body;
+      const { roomID, memberID } = req.body;
       const data = await this.roomService.removeMember(roomID, memberID);
       return res.status(200).json({ status: 200, data: data["data"] });
     } catch (error) {
       debugError(error.toString());
-      return res.status(500).json({ status: 500, data: "Server error" });
+      return res.status(500).json({ message: "Server error" });
     }
   };
 
