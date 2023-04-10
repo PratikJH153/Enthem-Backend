@@ -197,13 +197,13 @@ export default class UserController {
       const userInput = req.body;
 
       // Check if all required properties are present
-      if (!userInput.id || !userInput.username || !userInput.email) {
+      if (!userInput.id || !userInput.username || !userInput.email || !userInput.latitude || !userInput.longitude) {
         return res.status(400).json({ error: "Missing required fields" });
       }
 
       const checkEmailQuery = `
       MATCH (u:User)
-      WHERE u.id = "${userInput.id}"
+      WHERE u.email = "${userInput.email}" OR u.id = "${userInput.id}"
       RETURN DISTINCT u.username as username, u.email as email, u.age as age, u.gender as gender, u.photoURL as photoURL
     `;
       const emailResult = await session.run(checkEmailQuery);
@@ -225,7 +225,7 @@ export default class UserController {
       const createQuery = `
       CREATE (u:User {
         id: "${userInput.id}",
-        username: "${userInput.username}",
+        username: "${userInput.username.toLowerCase()}",
         email: "${userInput.email}",
         photoURL: "${userInput.photoURL}",
         gender: COALESCE("${userInput.gender}", "Unknown"),

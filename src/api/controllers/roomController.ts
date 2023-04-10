@@ -4,7 +4,6 @@ import { Container, Service } from 'typedi';
 import debugError from '../../services/debug_error';
 import {kProductionMode} from "../../constants/production_mode";
 
-
 @Service()
 export default class RoomController {
   roomService: RoomService;
@@ -101,7 +100,7 @@ export default class RoomController {
 
   public removeMember = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { roomID, memberID, owner } = req.body;
+      const { roomID, memberID } = req.body;
       const data = await this.roomService.removeMember(roomID, memberID);
       return res.status(200).json({ status: 200, data: data["data"] });
     } catch (error) {
