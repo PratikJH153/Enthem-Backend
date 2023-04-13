@@ -4,6 +4,8 @@ import { Container } from "typedi";
 import SocketService from "../services/socket_service";
 import config from "../config";
 import RoomService from "../services/room_service";
+import { encrypt,decrypt } from "../services/encrypt";
+
 
 export default (app) => {
   const server = createServer(app);
@@ -14,29 +16,43 @@ export default (app) => {
     console.log("Backend Connected");
     var roomID: string;
 
-    socket.on('removeMember', async (data) => {
-      console.log("asdasdasd" + data);
-      const {roomID, memberID} = data;
-      console.log(await roomService.removeMember(roomID, memberID));
-      socket.leave(roomID);
+    socket.on('disconnect', async (memberID) => {
       console.log("User removed");
+      console.log(await roomService.removeMember(roomID, memberID));
     })
 
-    socket.on('disconnect', async (roomID, memberID) => {
+    socket.on('disconnect', async () => {
       console.log("User Disconnected");
+      socket.leave(roomID);
     })
 
+    //encryption and decryption in messages
     socket.on("sendMsg", (msg) => {
       console.log("Message received!", msg);
-      var receiverChatID = msg.receiverChatID;
-      var senderChatID = msg.senderChatID;
-      var content = msg.content;
-      socket.broadcast.in(receiverChatID).emit("sendMsgServer", {
-        'content': content,
-        'senderChatID': senderChatID,
-        'receiverChatID': receiverChatID,
-      });
+      const receiverChatID = msg.receiverChatID;
+      const senderChatID = msg.senderChatID;
+      const content = encrypt(msg.content, config.secretKEY); // Encrypt the message content using the secret key
+      const encryptedMsg = {
+        content: content,
+        senderChatID: senderChatID,
+        receiverChatID: receiverChatID,
+      };
+      socket.broadcast.in(receiverChatID).emit("sendMsgServer", encryptedMsg);
     });
+
+    socket.on("receiveMsg", (msg) => {
+      console.log("Encrypted message received!", msg);
+      const receiverChatID = msg.receiverChatID;
+      const senderChatID = msg.senderChatID;
+      const content = decrypt(msg.content, config.secretKEY); // Decrypt the message content using the secret key
+      const decryptedMsg = {
+        content: content,
+        senderChatID: senderChatID,
+        receiverChatID: receiverChatID,
+      };
+      socket.broadcast.in(receiverChatID).emit("receiveMsgServer", decryptedMsg);
+    });
+
 
     //delete chat room
     socket.on("deleteRoom", async (data) => {

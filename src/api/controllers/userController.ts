@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { Driver } from "neo4j-driver";
 import debugError from '../../services/debug_error';
+import user from '../routes/user';
 
 
 export default class UserController {
@@ -60,19 +61,19 @@ export default class UserController {
       const { id, ...params } = req.body;
 
       if (params.hasOwnProperty('username')) {
-        const username = params.username.toLowerCase();
+        const username = params.username.replace(/\s+/g, '').toLowerCase();
         const usernameCheckQuery = `
-          MATCH (u:User)
-          WHERE toLower(u.username) = $username AND NOT id(u) = $id
-          RETURN u.username AS username
+          MATCH (n:User)
+          WHERE toLower(REPLACE(n.username, ' ', '')) = $username AND n.id <> $id
+          RETURN n.id AS id;
         `;
         const usernameCheckResult = await session.run(usernameCheckQuery, { username, id });
-
+      
         if (usernameCheckResult.records.length > 0) {
-          console.log('Sorry, Same username exists!');
           return res.status(400).json({ status: 400, data: 'Username already exists' });
         }
       }
+    
 
       const existingUser = await session.run(`
         MATCH (u:User {id: "${req.body.id}"})
@@ -171,11 +172,12 @@ export default class UserController {
   public isUsernameExists = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const session = this.db.session({ database: "neo4j" });
+      const username = req.body.username.replace(/\s+/g, "").toLowerCase();
       const query = `
-      MATCH (n:User)
-      WHERE toLower(n.username) = toLower(${req.body.username})
-      RETURN n.id AS id;
-    `;
+        MATCH (n:User)
+        WHERE replace(toLower(n.username), " ", "") = '${username}'
+        RETURN n.id AS id;
+      `;
       const result = await session.run(query);
       const record = result.records[0];
       session.close();

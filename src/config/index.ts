@@ -22,6 +22,7 @@ export default {
   mongoServer: process.env.MONGO_SERVER_NAME,
 
   jwtSecret: process.env.JWT_SECRET,
+  secretKEY : process.env.SECRET_KEY,
 
   logs: {
     level: process.env.LOG_LEVEL || 'silly',
