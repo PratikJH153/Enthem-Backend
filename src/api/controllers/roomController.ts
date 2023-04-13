@@ -121,8 +121,5 @@ export default class RoomController {
       debugError(error.toString());
       return res.status(500).json({ status: 500, data: "Server error" });
     }
-  };
-  
-  
-  
+  }; 
 };
