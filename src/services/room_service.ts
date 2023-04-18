@@ -17,7 +17,7 @@ export default class RoomService {
         {
           location: {
             $near: {
-              $maxDistance: 1 * miles * 1609.344, // distance in meters
+              $maxDistance: 5 * miles * 1609.344, // distance in meters (CHANGE IN MILES)
               $geometry: {
                 type: 'Point',
                 coordinates: coordinates
@@ -141,9 +141,5 @@ export default class RoomService {
     } catch (err) {
       throw new Error(err);
     }
-  }
-  
-  
-
-  
+  }  
 }

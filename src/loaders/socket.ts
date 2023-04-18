@@ -4,7 +4,6 @@ import { Container } from "typedi";
 import SocketService from "../services/socket_service";
 import config from "../config";
 import RoomService from "../services/room_service";
-import { encrypt,decrypt } from "../services/encrypt";
 
 
 export default (app) => {
@@ -30,12 +29,14 @@ export default (app) => {
     socket.on("sendMsg", (msg) => {
       console.log("Message received!", msg);
       const receiverChatID = msg.receiverChatID;
-      const senderChatID = msg.senderChatID;
-      const content = encrypt(msg.content, config.secretKEY); // Encrypt the message content using the secret key
+      const sender = msg.sender;
+      const content = msg.content; // Encrypt the message content using the secret key
+      const timestamp = msg.timestamp;
       const encryptedMsg = {
         content: content,
-        senderChatID: senderChatID,
+        sender: sender,
         receiverChatID: receiverChatID,
+        timestamp: timestamp
       };
       socket.broadcast.in(receiverChatID).emit("sendMsgServer", encryptedMsg);
     });
@@ -44,7 +45,7 @@ export default (app) => {
       console.log("Encrypted message received!", msg);
       const receiverChatID = msg.receiverChatID;
       const senderChatID = msg.senderChatID;
-      const content = decrypt(msg.content, config.secretKEY); // Decrypt the message content using the secret key
+      const content =msg.content; // Decrypt the message content using the secret key
       const decryptedMsg = {
         content: content,
         senderChatID: senderChatID,

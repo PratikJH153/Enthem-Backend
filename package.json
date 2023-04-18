@@ -32,6 +32,7 @@
     "body-parser": "^1.20.1",
     "cors": "^2.8.5",
     "crypto": "^1.0.1",
+    "crypto-js": "^4.1.1",
     "dotenv": "^16.0.3",
     "eslint": "^7.9.0",
     "eslint-config-prettier": "^6.11.0",
@@ -57,7 +58,9 @@
     "winston": "^3.8.2"
   },
   "dependencies": {
+    "@types/crypto-js": "^4.1.1",
     "compression": "^1.7.4",
+    "crypto-js": "^4.1.1",
     "express-rate-limit": "^6.7.0",
     "express-validator": "^6.15.0",
     "geolib": "^3.3.3",

@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { Driver } from "neo4j-driver";
 import debugError from '../../services/debug_error';
 import user from '../routes/user';
+import config from '../../config/index';
 
 
 export default class UserController {
@@ -54,7 +55,7 @@ export default class UserController {
     }
   };
 
-  
+
   public updateUser = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const session = this.db.session({ database: "neo4j" });
@@ -68,12 +69,12 @@ export default class UserController {
           RETURN n.id AS id;
         `;
         const usernameCheckResult = await session.run(usernameCheckQuery, { username, id });
-      
+
         if (usernameCheckResult.records.length > 0) {
           return res.status(400).json({ status: 400, data: 'Username already exists' });
         }
       }
-    
+
 
       const existingUser = await session.run(`
         MATCH (u:User {id: "${req.body.id}"})
@@ -90,27 +91,18 @@ export default class UserController {
 
       const updateQuery = `
         MATCH (u:User {id: "${req.body.id}"})
-        SET u.username = ("${req.body.username}"), ${setQuery}
-        RETURN u.username AS username, u.age AS age, u.photoURL as photoURL, u.latitude AS latitude, u.longitude AS longitude, u.gender AS gender
+        SET ${setQuery}
+        RETURN u.username AS username, u.age AS age, u. photoURL as photoURL, u.latitude AS latitude, u.longitude AS longitude, u.gender AS gender
       `;
 
       const result = await session.run(updateQuery, { id, ...params });
-      const resultList = result.records.map(record => ({
-        username: record.get('username'),
-        age: record.get('age').toNumber(),
-        gender: record.get('gender'),
-        photoURL: record.get('photoURL'),
-        latitude: record.get('latitude'),
-        longitude: record.get('longitude')
-      }));
-
       session.close();
-      return res.status(200).json({ status: 200, data: resultList });
+      return res.status(200).json({ status: 200, data: "User updated!" });
     } catch (e) {
       debugError(e.toString());
       return next(e);
     }
-};
+  };
 
 
 
@@ -204,26 +196,18 @@ export default class UserController {
         return res.status(400).json({ error: "Missing required fields" });
       }
 
-      const checkEmailQuery = `
-      MATCH (u:User)
-      WHERE u.email = "${userInput.email}" OR u.id = "${userInput.id}"
-      RETURN DISTINCT u.username as username, u.email as email, u.age as age, u.gender as gender, u.photoURL as photoURL
-    `;
-      const emailResult = await session.run(checkEmailQuery);
-      if (emailResult.records.length > 0) {
-        const resultListEmail = emailResult.records.map(record => ({
-          username: record.get('username'),
-          email: record.get('email'),
-          age: record.get('age').toNumber(),
-          gender: record.get('gender'),
-          photoURL: record.get('photoURL'),
-        }));
-        return res.status(409).json({
-          status: 409,
-          message: 'User already exists',
-          data: resultListEmail
-        });
-      }
+    //   const checkEmailQuery = `
+    //   MATCH (u:User)
+    //   WHERE u.email = "${userInput.email}" OR u.id = "${userInput.id}"
+    //   RETURN DISTINCT u.username as username, u.email as email, u.age as age, u.gender as gender, u.photoURL as photoURL
+    // `;
+    //   const emailResult = await session.run(checkEmailQuery);
+    //   if (emailResult.records.length > 0) {
+    //     return res.status(409).json({
+    //       status: 409,
+    //       data: 'User already exists'
+    //     });
+    //   }
 
       const createQuery = `
       CREATE (u:User {
@@ -239,15 +223,8 @@ export default class UserController {
       RETURN u.username as username, u.age as age, u.email as email, u.photoURL as photoURL, u.gender as gender
     `;
       const createResult = await session.run(createQuery);
-      const resultList = createResult.records.map(record => ({
-        username: record.get('username'),
-        email: record.get('email'),
-        age: record.get('age').toNumber(),
-        gender: record.get('gender'),
-        photoURL: record.get('photoURL'),
-      }));
       session.close();
-      return res.status(200).json({ status: 200, data: resultList });
+      return res.status(200).json({ status: 200, data: "User created!" });
     } catch (e) {
       debugError(e.toString());
       return next(e);
@@ -555,7 +532,7 @@ export default class UserController {
       const result = await session.run(interestQuery);
       if (result.records.length > 0) {
         const resultList = result.records.map(record => ({
-          id: record.get('id'),
+          id:record.get('id'),
           interests: record.get('interests')
         }));
         session.close();
@@ -614,7 +591,8 @@ export default class UserController {
       for (const id of idList) {
         const query = `
                 MATCH (n:User{id:"${id}"})
-                RETURN n.username AS username, n.photoURL AS photoURL, n.age AS age, n.gender AS gender, n.email AS email
+                RETURN n.
+                username AS username, n.photoURL AS photoURL, n.age AS age, n.gender AS gender, n.email AS email
             `;
         const result = await session.run(query);
         if (result.records.length > 0) {
