@@ -197,18 +197,18 @@ export default class UserController {
         return res.status(400).json({ error: "Missing required fields" });
       }
 
-      const checkEmailQuery = `
-      MATCH (u:User)
-      WHERE u.email = "${userInput.email}" OR u.id = "${userInput.id}"
-      RETURN DISTINCT u.username as username, u.email as email, u.age as age, u.gender as gender, u.photoURL as photoURL
-    `;
-      const emailResult = await session.run(checkEmailQuery);
-      if (emailResult.records.length > 0) {
-        return res.status(409).json({
-          status: 409,
-          data: 'User already exists'
-        });
-      }
+    //   const checkEmailQuery = `
+    //   MATCH (u:User)
+    //   WHERE u.email = "${userInput.email}" OR u.id = "${userInput.id}"
+    //   RETURN DISTINCT u.username as username, u.email as email, u.age as age, u.gender as gender, u.photoURL as photoURL
+    // `;
+    //   const emailResult = await session.run(checkEmailQuery);
+    //   if (emailResult.records.length > 0) {
+    //     return res.status(409).json({
+    //       status: 409,
+    //       data: 'User already exists'
+    //     });
+    //   }
 
       const createQuery = `
       CREATE (u:User {
