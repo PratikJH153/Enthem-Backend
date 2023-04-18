@@ -29,12 +29,12 @@ export default (app) => {
     socket.on("sendMsg", (msg) => {
       console.log("Message received!", msg);
       const receiverChatID = msg.receiverChatID;
-      const senderChatID = msg.senderChatID;
+      const sender = msg.sender;
       const content = msg.content; // Encrypt the message content using the secret key
       const timestamp = msg.timestamp;
       const encryptedMsg = {
         content: content,
-        senderChatID: senderChatID,
+        sender: sender,
         receiverChatID: receiverChatID,
         timestamp: timestamp
       };
