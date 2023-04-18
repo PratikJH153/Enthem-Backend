@@ -308,10 +308,10 @@ export default class UserController {
   };
 
 
-  public recommendUser = async (req: Request, res: Response, next: NextFunction) => {
+  public nearBy = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const session = this.db.session({ database: "neo4j" });
-      const max: number = +req.query.max || 10;
+      const max: number = +req.query.max || 3;
       const offset: number = +req.query.offset || 0;
       const skip: number = offset * max;
 
@@ -345,7 +345,8 @@ export default class UserController {
           gender: record.get('gender'),
           photoURL: record.get('photoURL'),
           latitude: record.get('latitude'),
-          longitude: record.get('longitude')
+          longitude: record.get('longitude'),
+          distance:record.get('distance')
         }));
         session.close();
         return res.status(200).json({ status: 200, data: resultList });
@@ -359,10 +360,10 @@ export default class UserController {
 
   };
 
-  public compatibleUsers = async (req: Request, res: Response, next: NextFunction) => {
+  public forYou = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const session = this.db.session({ database: "neo4j" });
-      const max: number = +req.query.max || 10;
+      const max: number = +req.query.max || 3;
       const offset: number = +req.query.offset || 0;
       const skip: number = offset * max;
 
