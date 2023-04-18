@@ -473,8 +473,7 @@ export default class UserController {
       const query = `
       WITH [${interests}] AS interestsList
       UNWIND interestsList AS interest
-      MERGE (s:Activity {name:interest})
-      WITH s
+      MATCH (s:Activity {name:interest})
       MATCH (u:User {id:"${req.body.id}"})
       MERGE (u)-[:HAS_INTEREST]->(s)
     `;
