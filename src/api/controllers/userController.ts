@@ -330,7 +330,7 @@ export default class UserController {
       WHERE distance <= 1000
       RETURN DISTINCT u2.username AS username, u2.email AS email, 
             u2.gender AS gender, u2.age AS age, u2.latitude AS latitude, u2.longitude AS longitude, 
-            u2.photoURL AS photoURL, distance
+            u2.photoURL AS photoURL, distance, COLLECT(s) AS interests
       ORDER BY distance ASC
       SKIP ${skip} LIMIT ${max}
 
@@ -346,7 +346,8 @@ export default class UserController {
           photoURL: record.get('photoURL'),
           latitude: record.get('latitude'),
           longitude: record.get('longitude'),
-          distance:record.get('distance')
+          distance:record.get('distance'),
+          interests:record.get('interests')
         }));
         session.close();
         return res.status(200).json({ status: 200, data: resultList });
