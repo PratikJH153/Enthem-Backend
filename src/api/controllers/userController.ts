@@ -327,7 +327,7 @@ export default class UserController {
       WITH u, u2, s, lat1, lon1, lat2, lon2, r,
           sin((lat2 - lat1) / 2) ^ 2 + cos(lat1) * cos(lat2) * sin((lon2 - lon1) / 2) ^ 2 AS a
       WITH u, u2, s, r * 2 * atan2(sqrt(a), sqrt(1 - a)) AS distance
-      WHERE distance <= 10000
+      WHERE distance <= 1000
       RETURN DISTINCT u2.username AS username, u2.email AS email, 
             u2.gender AS gender, u2.age AS age, u2.latitude AS latitude, u2.longitude AS longitude, 
             u2.photoURL AS photoURL, distance
