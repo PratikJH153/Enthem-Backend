@@ -2,7 +2,6 @@ import { Request, Response, NextFunction } from 'express';
 import { Driver } from "neo4j-driver";
 import debugError from '../../services/debug_error';
 import user from '../routes/user';
-import { encrypt } from '../../services/encrypt';
 import config from '../../config/index';
 
 
@@ -37,7 +36,7 @@ export default class UserController {
       const result = await session.run(query);
 
       const resultList = result.records.map(record => ({
-        id: encrypt(record.get('id'), config.secretKEY),
+        id: record.get('id'),
         username: record.get('username'),
         email: record.get('email'),
         age: record.get('age').toNumber(),
@@ -121,7 +120,7 @@ export default class UserController {
       if (result.records.length > 0) {
         const record = result.records[0];
         const data = {
-          id: encrypt(record.get('id'), config.secretKEY),
+          id: record.get('id'),
           username: record.get('username'),
           email: record.get('email'),
           age: record.get('age').toNumber(),
@@ -197,18 +196,18 @@ export default class UserController {
         return res.status(400).json({ error: "Missing required fields" });
       }
 
-      const checkEmailQuery = `
-      MATCH (u:User)
-      WHERE u.email = "${userInput.email}" OR u.id = "${userInput.id}"
-      RETURN DISTINCT u.username as username, u.email as email, u.age as age, u.gender as gender, u.photoURL as photoURL
-    `;
-      const emailResult = await session.run(checkEmailQuery);
-      if (emailResult.records.length > 0) {
-        return res.status(409).json({
-          status: 409,
-          data: 'User already exists'
-        });
-      }
+    //   const checkEmailQuery = `
+    //   MATCH (u:User)
+    //   WHERE u.email = "${userInput.email}" OR u.id = "${userInput.id}"
+    //   RETURN DISTINCT u.username as username, u.email as email, u.age as age, u.gender as gender, u.photoURL as photoURL
+    // `;
+    //   const emailResult = await session.run(checkEmailQuery);
+    //   if (emailResult.records.length > 0) {
+    //     return res.status(409).json({
+    //       status: 409,
+    //       data: 'User already exists'
+    //     });
+    //   }
 
       const createQuery = `
       CREATE (u:User {
@@ -534,7 +533,7 @@ export default class UserController {
       const result = await session.run(interestQuery);
       if (result.records.length > 0) {
         const resultList = result.records.map(record => ({
-          id: encrypt(record.get('id'), config.secretKEY),
+          id:record.get('id'),
           interests: record.get('interests')
         }));
         session.close();
@@ -600,8 +599,7 @@ export default class UserController {
         if (result.records.length > 0) {
           const user = result.records[0];
           users.push({
-
-            id: encrypt(id, config.secretKEY),
+            id: id,
             username: user.get('username'),
             photoURL: user.get('photoURL'),
             age: user.get('age').toNumber(),
