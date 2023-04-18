@@ -308,7 +308,7 @@ export default class UserController {
   };
 
 
-  public recommendUser = async (req: Request, res: Response, next: NextFunction) => {
+  public nearBy = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const session = this.db.session({ database: "neo4j" });
       const max: number = +req.query.max || 10;
@@ -359,7 +359,7 @@ export default class UserController {
 
   };
 
-  public compatibleUsers = async (req: Request, res: Response, next: NextFunction) => {
+  public forYou = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const session = this.db.session({ database: "neo4j" });
       const max: number = +req.query.max || 10;
@@ -514,8 +514,6 @@ export default class UserController {
       return next(e);
     }
   };
-
-
 
   public updateInterests = async (req: Request, res: Response, next: NextFunction) => {
     try {
