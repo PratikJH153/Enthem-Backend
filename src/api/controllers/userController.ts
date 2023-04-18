@@ -311,7 +311,7 @@ export default class UserController {
   public nearBy = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const session = this.db.session({ database: "neo4j" });
-      const max: number = +req.query.max || 10;
+      const max: number = +req.query.max || 3;
       const offset: number = +req.query.offset || 0;
       const skip: number = offset * max;
 
@@ -327,10 +327,10 @@ export default class UserController {
       WITH u, u2, s, lat1, lon1, lat2, lon2, r,
           sin((lat2 - lat1) / 2) ^ 2 + cos(lat1) * cos(lat2) * sin((lon2 - lon1) / 2) ^ 2 AS a
       WITH u, u2, s, r * 2 * atan2(sqrt(a), sqrt(1 - a)) AS distance
-      WHERE distance <= 10000
+      WHERE distance <= 1000
       RETURN DISTINCT u2.username AS username, u2.email AS email, 
             u2.gender AS gender, u2.age AS age, u2.latitude AS latitude, u2.longitude AS longitude, 
-            u2.photoURL AS photoURL, distance
+            u2.photoURL AS photoURL, distance, COLLECT(s) AS interests
       ORDER BY distance ASC
       SKIP ${skip} LIMIT ${max}
 
@@ -345,7 +345,9 @@ export default class UserController {
           gender: record.get('gender'),
           photoURL: record.get('photoURL'),
           latitude: record.get('latitude'),
-          longitude: record.get('longitude')
+          longitude: record.get('longitude'),
+          distance:record.get('distance'),
+          interests:record.get('interests')
         }));
         session.close();
         return res.status(200).json({ status: 200, data: resultList });
@@ -362,7 +364,7 @@ export default class UserController {
   public forYou = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const session = this.db.session({ database: "neo4j" });
-      const max: number = +req.query.max || 10;
+      const max: number = +req.query.max || 3;
       const offset: number = +req.query.offset || 0;
       const skip: number = offset * max;
 
@@ -450,8 +452,7 @@ export default class UserController {
       const query = `
       WITH [${interests}] AS interestsList
       UNWIND interestsList AS interest
-      MERGE (s:Activity {name:interest})
-      WITH s
+      MATCH (s:Activity {name:interest})
       MATCH (u:User {id:"${req.body.id}"})
       MERGE (u)-[:HAS_INTEREST]->(s)
     `;
