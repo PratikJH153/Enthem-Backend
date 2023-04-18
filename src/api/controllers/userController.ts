@@ -2,7 +2,6 @@ import { Request, Response, NextFunction } from 'express';
 import { Driver } from "neo4j-driver";
 import debugError from '../../services/debug_error';
 import user from '../routes/user';
-import { encrypt } from '../../services/encrypt';
 import config from '../../config/index';
 
 
@@ -37,7 +36,7 @@ export default class UserController {
       const result = await session.run(query);
 
       const resultList = result.records.map(record => ({
-        id: encrypt(record.get('id'), config.secretKEY),
+        id: record.get('id'),
         username: record.get('username'),
         email: record.get('email'),
         age: record.get('age').toNumber(),
@@ -121,7 +120,7 @@ export default class UserController {
       if (result.records.length > 0) {
         const record = result.records[0];
         const data = {
-          id: encrypt(record.get('id'), config.secretKEY),
+          id: record.get('id'),
           username: record.get('username'),
           email: record.get('email'),
           age: record.get('age').toNumber(),
@@ -534,7 +533,7 @@ export default class UserController {
       const result = await session.run(interestQuery);
       if (result.records.length > 0) {
         const resultList = result.records.map(record => ({
-          id: encrypt(record.get('id'), config.secretKEY),
+          id:record.get('id'),
           interests: record.get('interests')
         }));
         session.close();
@@ -600,8 +599,7 @@ export default class UserController {
         if (result.records.length > 0) {
           const user = result.records[0];
           users.push({
-
-            id: encrypt(id, config.secretKEY),
+            id: id,
             username: user.get('username'),
             photoURL: user.get('photoURL'),
             age: user.get('age').toNumber(),
