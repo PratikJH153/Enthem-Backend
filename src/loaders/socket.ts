@@ -31,10 +31,12 @@ export default (app) => {
       const receiverChatID = msg.receiverChatID;
       const senderChatID = msg.senderChatID;
       const content = msg.content; // Encrypt the message content using the secret key
+      const timestamp = msg.timestamp;
       const encryptedMsg = {
         content: content,
         senderChatID: senderChatID,
         receiverChatID: receiverChatID,
+        timestamp: timestamp
       };
       socket.broadcast.in(receiverChatID).emit("sendMsgServer", encryptedMsg);
     });
