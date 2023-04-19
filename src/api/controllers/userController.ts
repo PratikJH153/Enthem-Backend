@@ -186,50 +186,58 @@ export default class UserController {
 
 
   public createUser = async (req: Request, res: Response, next: NextFunction) => {
-
     try {
       const session = this.db.session({ database: "neo4j" });
       const userInput = req.body;
-
+  
       // Check if all required properties are present
       if (!userInput.id || !userInput.username || !userInput.email) {
         return res.status(400).json({ error: "Missing required fields" });
       }
-
+  
       const checkEmailQuery = `
-      MATCH (u:User)
-      WHERE u.email = "${userInput.email}"
-      RETURN DISTINCT u.username as username, u.email as email, u.age as age, u.gender as gender, u.photoURL as photoURL
-    `;
+        MATCH (u:User)
+        WHERE u.email = "${userInput.email}"
+        RETURN u
+      `;
       const emailResult = await session.run(checkEmailQuery);
+  
       if (emailResult.records.length > 0) {
-        return res.status(409).json({
-          status: 409,
-          data: 'User already exists'
-        });
+        // User already exists, so update their ID
+        const existingUser = emailResult.records[0].get("u").properties;
+        const updateQuery = `
+          MATCH (u:User { email: "${userInput.email}" })
+          SET u.id = "${userInput.id}"
+          RETURN u
+        `;
+        const updateResult = await session.run(updateQuery);
+        session.close();
+        return res.status(200).json({ status: 200, data: "User updated!" });
+      } else {
+        // User doesn't exist, so create a new one
+        const createQuery = `
+          CREATE (u:User {
+            id: "${userInput.id}",
+            username: "${userInput.username}",
+            email: "${userInput.email}",
+            photoURL: "${userInput.photoURL}",
+            gender: COALESCE("${userInput.gender}", "Unknown"),
+            age: COALESCE(${userInput.age}, 20),
+            latitude: ${userInput.latitude},
+            longitude: ${userInput.longitude}
+          })
+          RETURN u.username as username, u.age as age, u.email as email, u.photoURL as photoURL, u.gender as gender
+        `;
+        const createResult = await session.run(createQuery);
+        session.close();
+        return res.status(200).json({ status: 200, data: "User created!" });
       }
-
-      const createQuery = `
-      CREATE (u:User {
-        id: "${userInput.id}",
-        username: "${userInput.username}",
-        email: "${userInput.email}",
-        photoURL: "${userInput.photoURL}",
-        gender: COALESCE("${userInput.gender}", "Unknown"),
-        age: COALESCE(${userInput.age}, 20),
-        latitude: ${userInput.latitude},
-        longitude: ${userInput.longitude}
-      })
-      RETURN u.username as username, u.age as age, u.email as email, u.photoURL as photoURL, u.gender as gender
-    `;
-      const createResult = await session.run(createQuery);
-      session.close();
-      return res.status(200).json({ status: 200, data: "User created!" });
     } catch (e) {
       debugError(e.toString());
       return next(e);
     }
   };
+  
 
 
   public deleteUser = async (req: Request, res: Response, next: NextFunction) => {
@@ -476,7 +484,7 @@ export default class UserController {
     `;
       const result2 = await session.run(query2);
       session.close();
-      if (result2.records.length > 0) {
+      if (result2.records[0]["_fields"][0].length > 0) {
         return res.status(200).json({ status: 200, data: result2.records[0]["_fields"][0] });
       } else {
         return res.status(404).json({ status: 404, data: [] });
@@ -486,6 +494,7 @@ export default class UserController {
       return next(e);
     }
   };
+
 
   public returnInterests = async (req: Request, res: Response, next: NextFunction) => {
     try {
