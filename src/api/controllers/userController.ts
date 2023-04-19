@@ -192,7 +192,7 @@ export default class UserController {
       const userInput = req.body;
 
       // Check if all required properties are present
-      if (!userInput.id || !userInput.username || !userInput.email || !userInput.latitude || !userInput.longitude) {
+      if (!userInput.id || !userInput.username || !userInput.email) {
         return res.status(400).json({ error: "Missing required fields" });
       }
 
