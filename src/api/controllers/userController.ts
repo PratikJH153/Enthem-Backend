@@ -1,9 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { Driver } from "neo4j-driver";
 import debugError from '../../services/debug_error';
-import user from '../routes/user';
-import config from '../../config/index';
-
 
 export default class UserController {
   private db: Driver;
@@ -400,8 +397,6 @@ export default class UserController {
         distance_in_miles
       ORDER BY match_percentage DESC
       SKIP ${skip} LIMIT ${max}
-
-    
     `;
 
       const result = await session.run(query);
