@@ -15,13 +15,9 @@ export default (app) => {
     console.log("Backend Connected");
     var roomID: string;
 
-    socket.on('disconnect', async (memberID) => {
-      console.log("User removed");
-      console.log(await roomService.removeMember(roomID, memberID));
-    })
-
     socket.on('disconnect', async () => {
       console.log("User Disconnected");
+      console.log("User removed");
       socket.leave(roomID);
     })
 

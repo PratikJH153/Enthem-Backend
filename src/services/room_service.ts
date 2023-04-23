@@ -141,7 +141,7 @@ export default class RoomService {
       );
 
       if (!updatedRoom) {
-        throw new Error("Room not found or you are not the owner of the room.");
+        return {data: "Room not found or you are not the owner of the room."}
       }
 
       return { data: `Member removed successfully!` };
