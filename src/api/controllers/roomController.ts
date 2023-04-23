@@ -29,6 +29,22 @@ export default class RoomController {
     }
   };
 
+  public getPopularRooms = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const data = await this.roomService.getPopularRooms(page);
+      if (data){
+        return res.status(200).json({ status: 200, data: data["data"] });
+      } else{
+        return res.status(404).json({ status: 200, data: [] });
+      }
+    } catch (error) {
+      debugError(error.toString());
+      return res.status(500).json({ status: 500, data: kProductionMode?[]: error.toString() });
+    }
+  };
+
+
   public getRoom = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const data = await this.roomService.getRoom(req.body.id);

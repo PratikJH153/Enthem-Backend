@@ -17,7 +17,7 @@ export default class RoomService {
         {
           location: {
             $near: {
-              $maxDistance: 5 * miles * 1609.344, // distance in meters
+              $maxDistance: 5 * miles * 1609.344, // distance in meters (CHANGE IN MILES)
               $geometry: {
                 type: 'Point',
                 coordinates: coordinates
@@ -30,7 +30,24 @@ export default class RoomService {
         .skip(skip)
         .limit(5)
         .exec();
-      
+
+      return {
+        data: data ?? []
+      };
+    } catch (err) {
+      throw new Error(err);
+    }
+  }
+
+  public async getPopularRooms(page: number = 1): Promise<any> {
+    try {
+      const skip = (page - 1) * 5;
+      const data = await this.room.find()
+        .sort({ createdAt: "desc", participants: -1 })
+        .skip(skip)
+        .limit(5)
+        .exec();
+
       return {
         data: data ?? []
       };
@@ -51,13 +68,13 @@ export default class RoomService {
 
   }
 
-  public async getRoomsByOwnerID(ownerID: string): Promise<any>{
-    try{
-      const data = await this.room.find({ownerID: ownerID});
+  public async getRoomsByOwnerID(ownerID: string): Promise<any> {
+    try {
+      const data = await this.room.find({ ownerID: ownerID });
       return {
         data: data
       }
-    } catch(err){
+    } catch (err) {
       throw new Error(err);
     }
   }
@@ -77,27 +94,31 @@ export default class RoomService {
   }
 
   public async deleteRoom(roomID: string, ownerID: string): Promise<any> {
-    try{
-      const data = await this.room.deleteOne({ _id: roomID, ownerID: {$eq: ownerID} });
-      if (data["deletedCount"] > 0){
+    try {
+      const data = await this.room.deleteOne({ _id: roomID, ownerID: { $eq: ownerID } });
+      if (data["deletedCount"] > 0) {
         return { status: 200, data: "Room deleted successfully!" };
-      } else{
-        return { status: 404, data: "RoomID or OwnerID is incorrect!"};
+      } else {
+        return { status: 404, data: "RoomID or OwnerID is incorrect!" };
       }
-    } catch(err){
+    } catch (err) {
       throw new Error(err);
     }
   }
 
   public async addMember(roomID: string, memberID: string): Promise<any> {
-    const session  = await startSession();
+    const session = await startSession();
     session.startTransaction();
     try {
-      const data = {status: 200, data: `Member added successfully!`};
+      const data = { status: 200, data: `Member added successfully!` };
       const isExist = await this.room.findById(roomID).where("memberlist.memberId").in([memberID]).exec();
-      if (!isExist){
-        await this.room.updateOne({ _id: roomID }, { $push: { memberlist: { memberId: memberID, permit: false } } });
-      } else{
+      if (!isExist) {
+        await this.room.updateOne(
+          { _id: roomID }, 
+          { $push: { memberlist: { memberId: memberID, permit: false }, }},
+          { $inc: { participants: 1}}
+          );
+      } else {
         data["status"] = 409;
         data["data"] = "Member already exists";
       }
@@ -106,7 +127,7 @@ export default class RoomService {
     } catch (err) {
       await session.abortTransaction();
       throw new Error(err);
-    } finally{
+    } finally {
       session.endSession();
     }
   }
@@ -116,10 +137,11 @@ export default class RoomService {
       const updatedRoom = await this.room.findByIdAndUpdate(
         roomID,
         { $pull: { memberlist: { memberId: memberID } } },
+        { $inc: { participants: -1}}
       );
 
       if (!updatedRoom) {
-        throw new Error("Room not found or you are not the owner of the room.");
+        return {data: "Room not found or you are not the owner of the room."}
       }
 
       return { data: `Member removed successfully!` };
@@ -127,7 +149,7 @@ export default class RoomService {
       throw new Error(err);
     }
   }
-  
+
   public async searchRoom(substring: string): Promise<any> {
     try {
       const rooms = await this.room.find({
@@ -136,10 +158,10 @@ export default class RoomService {
           { description: { $regex: substring, $options: 'i' } }
         ]
       });
-  
+
       return { data: rooms };
     } catch (err) {
       throw new Error(err);
     }
-  }  
+  }
 }

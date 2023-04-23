@@ -1,9 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { Driver } from "neo4j-driver";
 import debugError from '../../services/debug_error';
-import user from '../routes/user';
-import config from '../../config/index';
-
 
 export default class UserController {
   private db: Driver;
@@ -186,50 +183,57 @@ export default class UserController {
 
 
   public createUser = async (req: Request, res: Response, next: NextFunction) => {
-
     try {
       const session = this.db.session({ database: "neo4j" });
       const userInput = req.body;
-
       // Check if all required properties are present
-      if (!userInput.id || !userInput.username || !userInput.email || !userInput.latitude || !userInput.longitude) {
+      if (!userInput.id || !userInput.username || !userInput.email || userInput.latitude == null || userInput.longitude == null) {
         return res.status(400).json({ error: "Missing required fields" });
       }
-
-    //   const checkEmailQuery = `
-    //   MATCH (u:User)
-    //   WHERE u.email = "${userInput.email}" OR u.id = "${userInput.id}"
-    //   RETURN DISTINCT u.username as username, u.email as email, u.age as age, u.gender as gender, u.photoURL as photoURL
-    // `;
-    //   const emailResult = await session.run(checkEmailQuery);
-    //   if (emailResult.records.length > 0) {
-    //     return res.status(409).json({
-    //       status: 409,
-    //       data: 'User already exists'
-    //     });
-    //   }
-
-      const createQuery = `
-      CREATE (u:User {
-        id: "${userInput.id}",
-        username: "${userInput.username}",
-        email: "${userInput.email}",
-        photoURL: "${userInput.photoURL}",
-        gender: COALESCE("${userInput.gender}", "Unknown"),
-        age: COALESCE(${userInput.age}, 20),
-        latitude: ${userInput.latitude},
-        longitude: ${userInput.longitude}
-      })
-      RETURN u.username as username, u.age as age, u.email as email, u.photoURL as photoURL, u.gender as gender
-    `;
-      const createResult = await session.run(createQuery);
-      session.close();
-      return res.status(200).json({ status: 200, data: "User created!" });
+  
+      const checkEmailQuery = `
+        MATCH (u:User)
+        WHERE u.email = "${userInput.email}"
+        RETURN u
+      `;
+      const emailResult = await session.run(checkEmailQuery);
+  
+      if (emailResult.records.length > 0) {
+        // User already exists, so update their ID
+        const existingUser = emailResult.records[0].get("u").properties;
+        const updateQuery = `
+          MATCH (u:User { email: "${userInput.email}" })
+          SET u.id = "${userInput.id}"
+          RETURN u
+        `;
+        const updateResult = await session.run(updateQuery);
+        session.close();
+        return res.status(200).json({ status: 200, data: "User updated!" });
+      } else {
+        // User doesn't exist, so create a new one
+        const createQuery = `
+          CREATE (u:User {
+            id: "${userInput.id}",
+            username: "${userInput.username}",
+            email: "${userInput.email}",
+            photoURL: "${userInput.photoURL}",
+            gender: COALESCE("${userInput.gender}", "Unknown"),
+            age: COALESCE(${userInput.age}, 20),
+            latitude: ${userInput.latitude},
+            longitude: ${userInput.longitude}
+          })
+          RETURN u.username as username, u.age as age, u.email as email, u.photoURL as photoURL, u.gender as gender
+        `;
+        const createResult = await session.run(createQuery);
+        session.close();
+        return res.status(200).json({ status: 200, data: "User created!" });
+      }
     } catch (e) {
       debugError(e.toString());
       return next(e);
     }
   };
+  
 
 
   public deleteUser = async (req: Request, res: Response, next: NextFunction) => {
@@ -308,10 +312,10 @@ export default class UserController {
   };
 
 
-  public recommendUser = async (req: Request, res: Response, next: NextFunction) => {
+  public nearBy = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const session = this.db.session({ database: "neo4j" });
-      const max: number = +req.query.max || 10;
+      const max: number = +req.query.max || 3;
       const offset: number = +req.query.offset || 0;
       const skip: number = offset * max;
 
@@ -320,17 +324,17 @@ export default class UserController {
       WHERE u.id = "${req.body.id}"
         AND u.latitude IS NOT NULL AND u.longitude IS NOT NULL 
         AND u2.id <> u.id 
-        AND u2.latitude IS NOT NULL AND u2.longitude IS NOT NULL 
+        AND u2.latitude IS NOT NULL AND u2.latitude <> -90 AND u2.longitude IS NOT NULL AND u2.longitude <> 0
       WITH u, u2, s, u.latitude * pi() / 180 AS lat1, u.longitude * pi() / 180 AS lon1,
           u2.latitude * pi() / 180 AS lat2, u2.longitude * pi() / 180 AS lon2,
           3959 AS r
       WITH u, u2, s, lat1, lon1, lat2, lon2, r,
           sin((lat2 - lat1) / 2) ^ 2 + cos(lat1) * cos(lat2) * sin((lon2 - lon1) / 2) ^ 2 AS a
       WITH u, u2, s, r * 2 * atan2(sqrt(a), sqrt(1 - a)) AS distance
-      WHERE distance <= 10000
+      WHERE distance <= 1000
       RETURN DISTINCT u2.username AS username, u2.email AS email, 
             u2.gender AS gender, u2.age AS age, u2.latitude AS latitude, u2.longitude AS longitude, 
-            u2.photoURL AS photoURL, distance
+            u2.photoURL AS photoURL, distance, COLLECT(s) AS interests
       ORDER BY distance ASC
       SKIP ${skip} LIMIT ${max}
 
@@ -345,7 +349,9 @@ export default class UserController {
           gender: record.get('gender'),
           photoURL: record.get('photoURL'),
           latitude: record.get('latitude'),
-          longitude: record.get('longitude')
+          longitude: record.get('longitude'),
+          distance:record.get('distance'),
+          interests: record.get('interests').map((e) => e["properties"]["name"] as String)
         }));
         session.close();
         return res.status(200).json({ status: 200, data: resultList });
@@ -359,10 +365,10 @@ export default class UserController {
 
   };
 
-  public compatibleUsers = async (req: Request, res: Response, next: NextFunction) => {
+  public forYou = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const session = this.db.session({ database: "neo4j" });
-      const max: number = +req.query.max || 10;
+      const max: number = +req.query.max || 3;
       const offset: number = +req.query.offset || 0;
       const skip: number = offset * max;
 
@@ -391,8 +397,6 @@ export default class UserController {
         distance_in_miles
       ORDER BY match_percentage DESC
       SKIP ${skip} LIMIT ${max}
-
-    
     `;
 
       const result = await session.run(query);
@@ -450,8 +454,7 @@ export default class UserController {
       const query = `
       WITH [${interests}] AS interestsList
       UNWIND interestsList AS interest
-      MERGE (s:Activity {name:interest})
-      WITH s
+      MATCH (s:Activity {name:interest})
       MATCH (u:User {id:"${req.body.id}"})
       MERGE (u)-[:HAS_INTEREST]->(s)
     `;
@@ -475,7 +478,7 @@ export default class UserController {
     `;
       const result2 = await session.run(query2);
       session.close();
-      if (result2.records.length > 0) {
+      if (result2.records[0]["_fields"][0].length > 0) {
         return res.status(200).json({ status: 200, data: result2.records[0]["_fields"][0] });
       } else {
         return res.status(404).json({ status: 404, data: [] });
@@ -485,6 +488,7 @@ export default class UserController {
       return next(e);
     }
   };
+
 
   public returnInterests = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -514,8 +518,6 @@ export default class UserController {
       return next(e);
     }
   };
-
-
 
   public updateInterests = async (req: Request, res: Response, next: NextFunction) => {
     try {

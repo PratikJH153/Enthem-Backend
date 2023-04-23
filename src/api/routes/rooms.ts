@@ -12,6 +12,7 @@ export default (app: Router) => {
 
   //* GET CALLS
   route.get('/all', checkAuth, roomController.getAllRooms);
+  route.get('/popular', checkAuth, roomController.getPopularRooms);
   route.get('/', checkAuth, roomController.getRoom);
   route.get('/owner', checkAuth, roomController.getRoomsByOwnerID);
   route.get('/search',checkAuth,roomController.searchRoom);

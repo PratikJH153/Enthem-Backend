@@ -20,9 +20,8 @@ export default (app: Router) => {
     route.get('/', checkAuth, userController.getUserBySessionId);
     route.get('/exists', checkAuth, userController.isUserExists);
     route.get('/usernameexists', checkAuth, userController.isUsernameExists);
-    route.get('/recommend', checkAuth, userController.recommendUser);
-    route.get('/locRecommend',checkAuth, userController.locRecommend);
-    route.get('/foryou',checkAuth, userController.compatibleUsers);
+    route.get('/nearby', checkAuth, userController.nearBy);
+    route.get('/foryou',checkAuth, userController.forYou);
     route.get('/interests',checkAuth, userController.interestsUser);
     route.get('/custom_fetch',checkAuth,userController.custom_fetch);
     route.get('/returnInterests',checkAuth,userController.returnInterests);

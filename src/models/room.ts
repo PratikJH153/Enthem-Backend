@@ -42,7 +42,12 @@ const Room = new mongoose.Schema(
     memberlist: [{
       memberId: { type: String, required: false },
       permit: { type: Boolean, required: false }
-    }]
+    }],
+    participants: {
+      type: Number,
+      required: false,
+      default: 0
+    }
   },
   { collection: 'rooms', timestamps: true }
 );
