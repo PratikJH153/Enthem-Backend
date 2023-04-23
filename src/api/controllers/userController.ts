@@ -324,7 +324,7 @@ export default class UserController {
       WHERE u.id = "${req.body.id}"
         AND u.latitude IS NOT NULL AND u.longitude IS NOT NULL 
         AND u2.id <> u.id 
-        AND u2.latitude IS NOT NULL AND u2.longitude IS NOT NULL 
+        AND u2.latitude IS NOT NULL AND u2.latitude <> -90 AND u2.longitude IS NOT NULL AND u2.longitude <> 0
       WITH u, u2, s, u.latitude * pi() / 180 AS lat1, u.longitude * pi() / 180 AS lon1,
           u2.latitude * pi() / 180 AS lat2, u2.longitude * pi() / 180 AS lon2,
           3959 AS r
