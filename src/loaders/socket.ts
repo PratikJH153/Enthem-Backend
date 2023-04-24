@@ -50,12 +50,10 @@ export default (app) => {
       socket.broadcast.in(receiverChatID).emit("receiveMsgServer", decryptedMsg);
     });
 
-
+    
     //delete chat room
-    socket.on("deleteRoom", async (data) => {
+    socket.on("deleteRoom", async () => {
       try {
-        const {roomID, ownerID} = data;
-        await roomService.deleteRoom(roomID, ownerID);
         socket.to(roomID).emit("groupDeleted", { message: "Group deleted by admin!" });
       } catch (error) {
         console.log(error);
