@@ -70,7 +70,7 @@ export default (app) => {
         console.log(memberID);
         socket.join(roomID);
         console.log(await roomService.addMember(roomID, memberID));
-        socket.to(roomID).emit("userJoinedRoom", { memberID });
+        socket.to(roomID).emit("userJoinedRoom", { memberID: memberID });
       } catch (error) {
         console.log(error);
       }
@@ -81,7 +81,8 @@ export default (app) => {
       try {
         const { roomID, memberID, ownerID } = data;
         await roomService.removeMember(roomID, memberID);
-        socket.to(roomID).emit("user removed by Admin", { memberID });
+        socket.to(roomID).emit("userRemoved", { memberID: memberID });
+        console.log("User removed successfully!");
       } catch (error) {
         console.log(error);
       }
