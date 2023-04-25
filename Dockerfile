@@ -20,4 +20,4 @@ ENV SECRET_KEY=770A8A65DA156D24EE2A093277530142
 
 EXPOSE 8080
 EXPOSE 8000
-CMD [ "npm", "run", "start" ]
+CMD [ "node", "./build/app.js" ]
