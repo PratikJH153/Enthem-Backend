@@ -26,7 +26,7 @@ export default class RoomService {
           }
         }
       ).where(
-        {_id: {$ne: "64479b68d1692751b648c98c"}},)
+        {_id: {$ne: "6447eefcb4a2662c84158478"}},)
         .sort({ createdAt: "desc" })
         .skip(skip)
         .limit(5)
@@ -45,7 +45,7 @@ export default class RoomService {
       const skip = (page - 1) * 5;
       const data = await this.room.find()
         .where(
-          {_id: {$ne: "64479b68d1692751b648c98c"}},)
+          {_id: {$ne: "6447eefcb4a2662c84158478"}},)
         .sort({ createdAt: "desc", participants: -1 })
         .skip(skip)
         .limit(5)
@@ -72,7 +72,7 @@ export default class RoomService {
 
   public async getIntroduceRoom(): Promise<any> {
     try {
-      const data = await this.room.findById("64479b68d1692751b648c98c");
+      const data = await this.room.findById("6447eefcb4a2662c84158478");
       return {
         data: data
       };
