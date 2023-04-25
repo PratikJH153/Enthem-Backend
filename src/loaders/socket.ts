@@ -66,7 +66,6 @@ export default (app) => {
       try {
         const { id, memberID } = data;
         roomID = id;
-        console.log(memberID);
         socket.join(roomID);
         console.log(await roomService.addMember(roomID, memberID));
         socket.to(roomID).emit("userJoinedRoom", { memberID: memberID });

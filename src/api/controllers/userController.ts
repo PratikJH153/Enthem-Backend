@@ -373,8 +373,6 @@ export default class UserController {
       const max: number = +req.query.max || 3;
       const offset: number = +req.query.offset || 0;
       const skip: number = offset * max;
-      console.log(req.body.id);
-      console.log(decrypt(req.body.id, config.secretKEY));
       const query = `
       MATCH (u:User)-[:HAS_INTEREST]->(s:Activity)
       WHERE u.id = "${decrypt(req.body.id, config.secretKEY)}"
@@ -592,11 +590,11 @@ export default class UserController {
   public getUsersByIds = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const session = this.db.session({ database: "neo4j" });
-      const idList = decrypt(req.body.id, config.secretKEY);
+      const idList = req.body.id;
       const users = [];
       for (const id of idList) {
         const query = `
-                MATCH (n:User{id:"${id}"})
+                MATCH (n:User{id:"${decrypt(id, config.secretKEY)}"})
                 RETURN n.
                 username AS username, n.photoURL AS photoURL, n.age AS age, n.gender AS gender, n.email AS email
             `;
@@ -609,7 +607,7 @@ export default class UserController {
             photoURL: user.get('photoURL'),
             age: user.get('age').toNumber(),
             gender: user.get('gender'),
-            email: user.get('email')
+            email:encrypt( user.get('email'), config.secretKEY)
           });
         }
       }
