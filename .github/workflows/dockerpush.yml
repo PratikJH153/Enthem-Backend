@@ -32,6 +32,8 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+    if: always()
+    
   update_ssh_linode:
     name: Telling Linode Server to Update
     needs: "push_to_registry"
@@ -45,3 +47,4 @@ jobs:
         password: ${{ secrets.PASSWORD }}
         port: ${{ secrets.PORT }}
         script: bash update.sh
+    if: always()
