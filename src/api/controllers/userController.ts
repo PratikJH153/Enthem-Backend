@@ -1,6 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import { Driver } from "neo4j-driver";
 import debugError from '../../services/debug_error';
+import {decrypt, encrypt} from '../../services/encrypt';
+import config from '../../config/index';
 
 export default class UserController {
   private db: Driver;
@@ -14,6 +16,7 @@ export default class UserController {
   public test = async (req: Request, res: Response, next: NextFunction) => {
     return res.status(200).json({ status: 200, data: "User Routes Working!" });
   };
+
 
   public getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -33,9 +36,9 @@ export default class UserController {
       const result = await session.run(query);
 
       const resultList = result.records.map(record => ({
-        id: record.get('id'),
-        username: record.get('username'),
-        email: record.get('email'),
+        id: encrypt(record.get('id'), config.secretKEY) ,
+        username:  record.get('username'),
+        email:encrypt(record.get('email'), config.secretKEY) ,
         age: record.get('age').toNumber(),
         gender: record.get('gender'),
         photoURL: record.get('photoURL'),
@@ -72,9 +75,8 @@ export default class UserController {
         }
       }
 
-
       const existingUser = await session.run(`
-        MATCH (u:User {id: "${req.body.id}"})
+        MATCH (u:User {id: "${decrypt(req.body.id, config.secretKEY)}"})
         RETURN u
       `, { id });
 
@@ -87,7 +89,7 @@ export default class UserController {
       const setQuery = setStatements.join(', ');
 
       const updateQuery = `
-        MATCH (u:User {id: "${req.body.id}"})
+        MATCH (u:User {id: "${decrypt(req.body.id, config.secretKEY)}"})
         SET ${setQuery}
         RETURN u.username AS username, u.age AS age, u. photoURL as photoURL, u.latitude AS latitude, u.longitude AS longitude, u.gender AS gender
       `;
@@ -102,13 +104,11 @@ export default class UserController {
   };
 
 
-
-
   public getUserBySessionId = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const session = this.db.session({ database: "neo4j" });
       const query = `
-        MATCH (n:User {id:"${req.body.id}"})-[r:HAS_INTEREST]->(n2:Activity)
+        MATCH (n:User {id:"${decrypt(req.body.id, config.secretKEY)}"})-[r:HAS_INTEREST]->(n2:Activity)
         RETURN n.id AS id, n.username AS username, n.email AS email, n.age AS age,
           n.gender AS gender, n.photoURL AS photoURL,
           n.latitude AS latitude, n.longitude AS longitude, COLLECT(DISTINCT n2.name) AS interests;
@@ -117,9 +117,9 @@ export default class UserController {
       if (result.records.length > 0) {
         const record = result.records[0];
         const data = {
-          id: record.get('id'),
+          id: encrypt(record.get('id'), config.secretKEY) ,
           username: record.get('username'),
-          email: record.get('email'),
+          email:  encrypt(record.get('email'), config.secretKEY) ,
           age: record.get('age').toNumber(),
           gender: record.get('gender'),
           photoURL: record.get('photoURL'),
@@ -138,11 +138,13 @@ export default class UserController {
     }
   };
 
+
   public isUserExists = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const session = this.db.session({ database: "neo4j" });
+      
       const query = `
-      MATCH (n:User {id:"${req.body.id}"})
+      MATCH (n:User {id:"${decrypt(req.body.id, config.secretKEY) }"})
       RETURN n.id AS id;
     `;
       const result = await session.run(query);
@@ -240,7 +242,7 @@ export default class UserController {
     try {
       const session = this.db.session({ database: "neo4j" });
       const query = `
-      MATCH (u:User {id: "${req.body.id}"})
+      MATCH (u:User {id: "${decrypt(req.body.id, config.secretKEY)}"})
       WITH u LIMIT 1
       OPTIONAL MATCH (u)-[r]-()
       DELETE u, r
@@ -270,7 +272,7 @@ export default class UserController {
 
       const query = `
       MATCH (u:User)
-      WHERE u.id = "${req.body.id}" 
+      WHERE u.id = "${decrypt(req.body.id, config.secretKEY)}" 
       AND u.latitude IS NOT NULL AND u.longitude IS NOT NULL 
       MATCH (u2:User)
       WHERE u2.id <> u.id 
@@ -293,7 +295,7 @@ export default class UserController {
       if (result.records.length > 0) {
         const resultList = result.records.map(record => ({
           username: record.get('username'),
-          email: record.get('email'),
+          email: encrypt(record.get('email'), config.secretKEY),
           age: record.get('age').toNumber(),
           gender: record.get('gender'),
           photoURL: record.get('photoURL'),
@@ -321,7 +323,7 @@ export default class UserController {
 
       const query = `
       MATCH (u:User)-[:HAS_INTEREST]->(s:Activity)<-[:HAS_INTEREST]-(u2:User)
-      WHERE u.id = "${req.body.id}"
+      WHERE u.id = "${decrypt(req.body.id, config.secretKEY)}"
         AND u.latitude IS NOT NULL AND u.longitude IS NOT NULL 
         AND u2.id <> u.id 
         AND u2.latitude IS NOT NULL AND u2.latitude <> -90 AND u2.longitude IS NOT NULL AND u2.longitude <> 0
@@ -344,7 +346,7 @@ export default class UserController {
       if (result.records.length > 0) {
         const resultList = result.records.map(record => ({
           username: record.get('username'),
-          email: record.get('email'),
+          email: encrypt(record.get('email'), config.secretKEY),
           age: record.get('age').toNumber(),
           gender: record.get('gender'),
           photoURL: record.get('photoURL'),
@@ -371,10 +373,11 @@ export default class UserController {
       const max: number = +req.query.max || 3;
       const offset: number = +req.query.offset || 0;
       const skip: number = offset * max;
-
+      console.log(req.body.id);
+      console.log(decrypt(req.body.id, config.secretKEY));
       const query = `
       MATCH (u:User)-[:HAS_INTEREST]->(s:Activity)
-      WHERE u.id = "${req.body.id}"
+      WHERE u.id = "${decrypt(req.body.id, config.secretKEY)}"
       WITH u, COLLECT(s) AS interests
       MATCH (u2:User)-[:HAS_INTEREST]->(s2:Activity)
       WHERE u2.id <> u.id
@@ -403,7 +406,7 @@ export default class UserController {
       if (result.records.length > 0) {
         const resultList = result.records.map(record => ({
           username: record.get('username'),
-          email: record.get('email'),
+          email: encrypt(record.get('email'), config.secretKEY),
           age: record.get('age').toNumber(),
           gender: record.get('gender'),
           photoURL: record.get('photoURL'),
@@ -433,7 +436,7 @@ export default class UserController {
       UNWIND skillsList AS skill
       MERGE (s:Activity {name:skill})
       WITH s
-      MATCH (u:User {id:"${req.body.id}"})
+      MATCH (u:User {id:"${decrypt(req.body.id, config.secretKEY)}"})
       MERGE (u)-[:HAS_SKILL]->(s)
     `;
 
@@ -455,7 +458,7 @@ export default class UserController {
       WITH [${interests}] AS interestsList
       UNWIND interestsList AS interest
       MATCH (s:Activity {name:interest})
-      MATCH (u:User {id:"${req.body.id}"})
+      MATCH (u:User {id:"${decrypt(req.body.id, config.secretKEY)}"})
       MERGE (u)-[:HAS_INTEREST]->(s)
     `;
 
@@ -473,7 +476,7 @@ export default class UserController {
     try {
       const session = this.db.session({ database: "neo4j" });
       const query2 = `
-      MATCH (n:User{id:"${req.body.id}"})-[r:HAS_INTEREST]->(n2:Activity)
+      MATCH (n:User{id:"${decrypt(req.body.id, config.secretKEY)}"})-[r:HAS_INTEREST]->(n2:Activity)
       RETURN COLLECT(DISTINCT n2.name) AS interest
     `;
       const result2 = await session.run(query2);
@@ -494,7 +497,7 @@ export default class UserController {
     try {
       const session = this.db.session({ database: "neo4j" });
       const query1 = `
-      MATCH (n:User{id:"${req.body.id}"})
+      MATCH (n:User{id:"${decrypt(req.body.id, config.secretKEY)}"})
       RETURN n.id AS id
     `;
       const result1 = await session.run(query1);
@@ -502,7 +505,7 @@ export default class UserController {
         return res.status(404).json({ status: 404, message: "Sorry, no user with the given ID exists." });
       }
       const query2 = `
-      MATCH (n:User{id:"${req.body.id}"})-[r:HAS_INTEREST]->(n2:Activity)
+      MATCH (n:User{id:"${decrypt(req.body.id, config.secretKEY)}"})-[r:HAS_INTEREST]->(n2:Activity)
       RETURN COLLECT(DISTINCT n2.name) AS interests
     `;
       const result2 = await session.run(query2);
@@ -528,14 +531,14 @@ export default class UserController {
           UNWIND interestsList AS interest
           MERGE (s:Activity {name:interest})
           WITH s
-          MATCH (u:User {id: "${req.body.id}"})
+          MATCH (u:User {id: "${decrypt(req.body.id, config.secretKEY)}"})
           MERGE (u)-[:HAS_INTEREST]->(s)
           RETURN u.id AS id, collect(s.name) AS interests
       `;
       const result = await session.run(interestQuery);
       if (result.records.length > 0) {
         const resultList = result.records.map(record => ({
-          id:record.get('id'),
+          id:encrypt(record.get('id'), config.secretKEY),
           interests: record.get('interests')
         }));
         session.close();
@@ -589,7 +592,7 @@ export default class UserController {
   public getUsersByIds = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const session = this.db.session({ database: "neo4j" });
-      const idList = req.body.id;
+      const idList = decrypt(req.body.id, config.secretKEY);
       const users = [];
       for (const id of idList) {
         const query = `

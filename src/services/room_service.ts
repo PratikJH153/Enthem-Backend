@@ -25,7 +25,8 @@ export default class RoomService {
             }
           }
         }
-      )
+      ).where(
+        {_id: {$ne: "64479b68d1692751b648c98c"}},)
         .sort({ createdAt: "desc" })
         .skip(skip)
         .limit(5)
@@ -43,6 +44,8 @@ export default class RoomService {
     try {
       const skip = (page - 1) * 5;
       const data = await this.room.find()
+        .where(
+          {_id: {$ne: "64479b68d1692751b648c98c"}},)
         .sort({ createdAt: "desc", participants: -1 })
         .skip(skip)
         .limit(5)
@@ -65,7 +68,17 @@ export default class RoomService {
     } catch (err) {
       throw new Error(err);
     }
+  }
 
+  public async getIntroduceRoom(): Promise<any> {
+    try {
+      const data = await this.room.findById("64479b68d1692751b648c98c");
+      return {
+        data: data
+      };
+    } catch (err) {
+      throw new Error(err);
+    }
   }
 
   public async getRoomsByOwnerID(ownerID: string): Promise<any> {

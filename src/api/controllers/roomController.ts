@@ -58,6 +58,19 @@ export default class RoomController {
     }
   };
 
+  public getIntroduceRoom = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const data = await this.roomService.getIntroduceRoom();
+      if (data["data"]){
+        return res.status(200).json({ status: 200, data: data["data"] });
+      }
+      return res.status(404).json({ status: 404, data: "Room not found!" });
+    } catch (error) {
+      debugError(error.toString());
+      return res.status(500).json({ status: 500, data: kProductionMode?[]: error.toString()});
+    }
+  };
+
   public getRoomsByOwnerID = async (req: Request, res: Response, next:NextFunction) => {
     try{
       const data = await this.roomService.getRoomsByOwnerID(req.body.ownerID);
