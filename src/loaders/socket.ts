@@ -53,9 +53,10 @@ export default (app) => {
 
     
     //delete chat room
-    socket.on("deleteRoom", async () => {
+    socket.on("deleteRoom", async (data) => {
       try {
-        socket.to(roomID).emit("groupDeleted", { message: "Group deleted by admin!" });
+        console.log(data["roomID"]);
+        socket.to(data["roomID"]).emit("groupDeleted", { message: "Group deleted by admin!" });
       } catch (error) {
         console.log(error);
       }
@@ -77,7 +78,7 @@ export default (app) => {
     //remove member from chat room by Admin(owner)
     socket.on("removeMember", async (data) => {
       try {
-        const { roomID, memberID, ownerID } = data;
+        const { roomID, memberID } = data;
         await roomService.removeMember(roomID, memberID);
         socket.to(roomID).emit("userRemoved", { memberID: memberID });
         console.log("User removed successfully!");
