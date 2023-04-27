@@ -80,6 +80,17 @@ export default (app) => {
       try {
         const { roomID, memberID } = data;
         await roomService.removeMember(roomID, memberID);
+        socket.to(roomID).emit("bye", { memberID: memberID });
+        console.log("User left successfully!");
+      } catch (error) {
+        console.log(error);
+      }
+    });
+    
+    socket.on("adminRemoved", async (data) => {
+      try {
+        const { roomID, memberID } = data;
+        await roomService.removeMember(roomID, memberID);
         socket.to(roomID).emit("userRemoved", { memberID: memberID });
         console.log("User removed successfully!");
       } catch (error) {
