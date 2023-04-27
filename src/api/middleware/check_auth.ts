@@ -3,7 +3,6 @@ import debugError from "../../services/debug_error";
 import {Request, Response, NextFunction} from "express";
 import jwt from "jsonwebtoken";
 
-//! Solve Container logger error
 const attachCurrentUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const authHeader = req.headers['authorization']

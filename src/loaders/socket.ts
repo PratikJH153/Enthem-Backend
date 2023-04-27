@@ -1,7 +1,6 @@
 import { createServer } from "http";
 import { Server } from "socket.io";
 import { Container } from "typedi";
-import SocketService from "../services/socket_service";
 import config from "../config";
 import RoomService from "../services/room_service";
 import { decrypt } from "../services/encrypt";
@@ -10,7 +9,6 @@ import { decrypt } from "../services/encrypt";
 export default (app) => {
   const server = createServer(app);
   const io = new Server(server);
-  const socketService = Container.get(SocketService);
   const roomService = Container.get(RoomService);
   io.on("connection", (socket) => {
     console.log("Backend Connected");
@@ -80,7 +78,7 @@ export default (app) => {
       try {
         const { roomID, memberID } = data;
         await roomService.removeMember(roomID, memberID);
-        socket.to(roomID).emit("bye", { memberID: memberID });
+        socket.to(roomID).emit("bye", { memberId: memberID });
         console.log("User left successfully!");
       } catch (error) {
         console.log(error);
@@ -91,7 +89,7 @@ export default (app) => {
       try {
         const { roomID, memberID } = data;
         await roomService.removeMember(roomID, memberID);
-        socket.to(roomID).emit("userRemoved", { memberID: memberID });
+        socket.to(roomID).emit("userRemoved", { memberId: memberID });
         console.log("User removed successfully!");
       } catch (error) {
         console.log(error);
