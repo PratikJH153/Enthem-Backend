@@ -63,11 +63,11 @@ export default (app) => {
     //add member to memberlist of chat room
     socket.on("joinRoom", async (data) => {
       try {
-        const { id, memberID } = data;
+        const { id, memberID, username } = data;
         roomID = id;
         socket.join(roomID);
         console.log(await roomService.addMember(roomID, memberID));
-        socket.to(roomID).emit("userJoinedRoom", { memberID: memberID });
+        socket.to(roomID).emit("userJoinedRoom", { memberId: memberID, username: username });
       } catch (error) {
         console.log(error);
       }
@@ -76,9 +76,9 @@ export default (app) => {
     //remove member from chat room by Admin(owner)
     socket.on("removeMember", async (data) => {
       try {
-        const { roomID, memberID } = data;
+        const { roomID, memberID, username } = data;
         await roomService.removeMember(roomID, memberID);
-        socket.to(roomID).emit("bye", { memberId: memberID });
+        socket.to(roomID).emit("bye", { memberId: memberID, username:username });
         console.log("User left successfully!");
       } catch (error) {
         console.log(error);
@@ -87,9 +87,9 @@ export default (app) => {
     
     socket.on("adminRemoved", async (data) => {
       try {
-        const { roomID, memberID } = data;
+        const { roomID, memberID, username } = data;
         await roomService.removeMember(roomID, memberID);
-        socket.to(roomID).emit("userRemoved", { memberId: memberID });
+        socket.to(roomID).emit("userRemoved", { memberId: memberID,username: username });
         console.log("User removed successfully!");
       } catch (error) {
         console.log(error);
