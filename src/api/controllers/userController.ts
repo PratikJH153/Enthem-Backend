@@ -24,36 +24,38 @@ export default class UserController {
       const max: number = +req.query.max || 10;
       const offset: number = +req.query.offset || 0;
       const skip: number = offset * max;
-
+  
       const query = `
         MATCH (n:User)
         RETURN n.id AS id, n.username AS username, n.email AS email, n.age AS age,
           n.gender AS gender, n.photoURL AS photoURL,
-          n.latitude AS latitude, n.longitude AS longitude
+          n.latitude AS latitude, n.longitude AS longitude, n.rooms AS rooms
         SKIP ${skip} LIMIT ${max};
       `;
-
+  
       const result = await session.run(query);
-
+  
       const resultList = result.records.map(record => ({
-        id: encrypt(record.get('id'), config.secretKEY) ,
-        username:  record.get('username'),
-        email:encrypt(record.get('email'), config.secretKEY) ,
+        id: encrypt(record.get('id'), config.secretKEY),
+        username: record.get('username'),
+        email: encrypt(record.get('email'), config.secretKEY),
         age: record.get('age').toNumber(),
         gender: record.get('gender'),
         photoURL: record.get('photoURL'),
         latitude: record.get('latitude'),
-        longitude: record.get('longitude')
+        longitude: record.get('longitude'),
+        rooms: record.get('rooms')
       }));
-
+  
       session.close();
       return res.status(200).json({ status: 200, data: resultList });
-
-    } catch (e) {
-      debugError(e.toString());
-      return next(e);
+  
+    } catch (error) {
+      debugError(error.toString());
+      return next(error);
     }
   };
+  
 
 
   public updateUser = async (req: Request, res: Response, next: NextFunction) => {
@@ -111,7 +113,7 @@ export default class UserController {
         MATCH (n:User {id:"${decrypt(req.body.id, config.secretKEY)}"})-[r:HAS_INTEREST]->(n2:Activity)
         RETURN n.id AS id, n.username AS username, n.email AS email, n.age AS age,
           n.gender AS gender, n.photoURL AS photoURL,
-          n.latitude AS latitude, n.longitude AS longitude, COLLECT(DISTINCT n2.name) AS interests;
+          n.latitude AS latitude, n.longitude AS longitude, COLLECT(DISTINCT n2.name) AS interests;n.rooms AS rooms
       `;
       const result = await session.run(query);
       if (result.records.length > 0) {
@@ -125,7 +127,8 @@ export default class UserController {
           photoURL: record.get('photoURL'),
           latitude: record.get('latitude'),
           longitude: record.get('longitude'),
-          interests: record.get('interests')
+          interests: record.get('interests'),
+          rooms:record.get('rooms')
         };
         session.close();
         return res.status(200).json({ status: 200, data: data });
@@ -222,7 +225,8 @@ export default class UserController {
             gender: COALESCE("${userInput.gender}", "Unknown"),
             age: COALESCE(${userInput.age}, 20),
             latitude: ${userInput.latitude},
-            longitude: ${userInput.longitude}
+            longitude: ${userInput.longitude},
+            rooms: []
           })
           RETURN u.username as username, u.age as age, u.email as email, u.photoURL as photoURL, u.gender as gender
         `;
@@ -230,9 +234,9 @@ export default class UserController {
         session.close();
         return res.status(200).json({ status: 200, data: "User created!" });
       }
-    } catch (e) {
-      debugError(e.toString());
-      return next(e);
+    } catch (error) {
+      debugError(error.toString());
+      return next(error);
     }
   };
   
@@ -621,4 +625,58 @@ export default class UserController {
       return next(e);
     }
   };
+
+  public updateRoomsList_add = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const session = this.db.session({ database: "neo4j" });
+      const { id, roomId } = req.body;
+      const query = `
+        MATCH (u:User {id: "${id}"})
+        SET u.rooms = u.rooms + "${roomId}"
+        RETURN u.id AS id, u.rooms AS rooms
+      `;
+      const result = await session.run(query);
+      session.close();
+  
+      if (result.records.length > 0) {
+        const record = result.records[0];
+        const id = record.get('id');
+        const rooms = record.get('rooms');
+        return res.status(200).json({ status: 200, data: { id, rooms } });
+      }
+  
+      return res.status(404).json({ status: 200, data: null });
+    } catch (error) {
+      debugError(error.toString());
+      return next(error);
+    }
+  };
+
+  public updateRoomsList_delete = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const session = this.db.session({ database: "neo4j" });
+      const { id, roomId } = req.body;
+      const query = `
+        MATCH (u:User {id: "${id}"})
+        SET u.rooms = [roomID IN u.rooms WHERE roomID <> "${roomId}"]
+        RETURN u.id AS id, u.rooms AS rooms
+      `;
+      const result = await session.run(query);
+      session.close();
+  
+      if (result.records.length > 0) {
+        const record = result.records[0];
+        const id = record.get('id');
+        const rooms = record.get('rooms');
+        return res.status(200).json({ status: 200, data: { id, rooms } });
+      }
+  
+      return res.status(404).json({ status: 200, data: null });
+    } catch (error) {
+      debugError(error.toString());
+      return next(error);
+    }
+  };
+  
+  
 }

@@ -30,6 +30,7 @@ export default (app: Router) => {
     //* POST CALLS
     route.post('/', checkAuth, userController.createUser);
     route.post('/interests', checkAuth, userController.createInterests);
+    route.post('/updateRoomsList_add',checkAuth,userController.updateRoomsList_add);
 
     //* PUT CALLS
     route.put('/', checkAuth, userController.updateUser);
@@ -37,4 +38,5 @@ export default (app: Router) => {
 
     //* DELETE CALLS
     route.delete('/', checkAuth, userController.deleteUser);
+    route.delete('/updateRoomsList_delete', checkAuth, userController.updateRoomsList_delete);
 };
