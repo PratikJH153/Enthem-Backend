@@ -8,7 +8,17 @@ const Room = new mongoose.Schema(
       required: [true, 'title is required'],
       maxlength: 100,
       minlength: 3
-    },    
+    },
+    tags: [{
+      type: String,
+      required: false,
+      default: "default"
+    }],
+    defaultRoom: {
+      type: Boolean,
+      required: false,
+      default: false,
+    },
     des: {
       type: String,
       required: false,
