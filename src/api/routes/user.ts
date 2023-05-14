@@ -41,4 +41,5 @@ export default (app: Router) => {
     //* DELETE CALLS
     route.delete('/', checkAuth, userController.deleteUser);
     route.delete('/deleteRoom', checkAuth, userController.updateRoomsList_delete);
+    route.delete('/delete_userLike',checkAuth,userController.delete_userLike);
 };

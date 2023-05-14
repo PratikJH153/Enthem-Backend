@@ -730,7 +730,27 @@ export default class UserController {
       return next(error);
     }
   };
-    
+
+  
+  public delete_userLike = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const session = this.db.session({ database: "neo4j" });
+      const { id, second_Id } = req.body;
+      const query = `
+        MATCH (a:User {id: $id})-[r:HAS_LIKED]->(b:User {id: $second_Id})
+        DELETE r
+      `;
+      const result = await session.run(query, { id, second_Id });
+      session.close();
+      const success = result.summary.counters.updates().relationshipsDeleted > 0;
+      return res.status(200).json({ status: 200, data: success });
+    } catch (error) {
+      debugError(error.toString());
+      return next(error);
+    }
+  };
+  
+  
   
   
 }
