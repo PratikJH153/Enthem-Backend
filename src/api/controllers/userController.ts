@@ -677,6 +677,60 @@ export default class UserController {
       return next(error);
     }
   };
+
+  public post_userLike = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const session = this.db.session({ database: "neo4j" });
+      const { id, second_Id } = req.body;
+      const query = `
+        MATCH (a:User {id: $id}), (b:User {id: $second_Id})
+        MERGE (a)-[r:HAS_LIKED]->(b)
+        RETURN COUNT(r) > 0 AS success
+      `;
+      const result = await session.run(query, { id, second_Id });
+      session.close();
+      if (result.records.length > 0) {
+        const record = result.records[0];
+        const success = record.get('success');
+        return res.status(200).json({ status: 200, data: success });
+      }
+      return res.status(404).json({ status: 200, data: false });
+    } catch (error) {
+      debugError(error.toString());
+      return next(error);
+    }
+  };
+  
+
+  public get_userLikes = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const session = this.db.session({ database: "neo4j" });
+      const { id } = req.body;
+      const query = `
+        MATCH (a:User {id: $id})-[:HAS_LIKED]->(b)
+        RETURN b.username AS username, b.email AS email, b.age AS age, b.gender AS gender,
+          b.photoURL AS photoURL, b.latitude AS latitude, b.longitude AS longitude
+      `;
+      const result = await session.run(query, { id });
+      session.close();
+  
+      const likedEntities = result.records.map((record) => ({
+        username: record.get('username'),
+        email: record.get('email'),
+        age: record.get('age').toNumber(),
+        gender: record.get('gender'),
+        photoURL: record.get('photoURL'),
+        latitude: record.get('latitude'),
+        longitude: record.get('longitude')
+      }));
+  
+      return res.status(200).json({ status: 200, data: likedEntities });
+    } catch (error) {
+      debugError(error.toString());
+      return next(error);
+    }
+  };
+    
   
   
 }
