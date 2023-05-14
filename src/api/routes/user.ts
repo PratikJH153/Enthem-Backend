@@ -26,13 +26,13 @@ export default (app: Router) => {
     route.get('/custom_fetch',checkAuth,userController.custom_fetch);
     route.get('/returnInterests',checkAuth,userController.returnInterests);
     route.get('/getUserByIds',checkAuth,userController.getUsersByIds);
-    route.get('/get_userLikes',checkAuth,userController.get_userLikes);
+    route.get('/likes',checkAuth,userController.get_userLikes);
 
     //* POST CALLS
     route.post('/', checkAuth, userController.createUser);
     route.post('/interests', checkAuth, userController.createInterests);
-    route.post('/updateRoomsList_add',checkAuth,userController.updateRoomsList_add);
-    route.post('/post_userLike',checkAuth,userController.post_userLike);
+    route.post('/addRoom',checkAuth,userController.updateRoomsList_add);
+    route.post('/likes',checkAuth,userController.post_userLike);
 
     //* PUT CALLS
     route.put('/', checkAuth, userController.updateUser);
@@ -40,5 +40,5 @@ export default (app: Router) => {
 
     //* DELETE CALLS
     route.delete('/', checkAuth, userController.deleteUser);
-    route.delete('/updateRoomsList_delete', checkAuth, userController.updateRoomsList_delete);
+    route.delete('/deleteRoom', checkAuth, userController.updateRoomsList_delete);
 };
