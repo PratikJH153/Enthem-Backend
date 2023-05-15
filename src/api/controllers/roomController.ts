@@ -54,7 +54,7 @@ export default class RoomController {
       return res.status(404).json({ status: 404, data: "Room not found!" });
     } catch (error) {
       debugError(error.toString());
-      return res.status(500).json({ status: 500, data: kProductionMode?[]: error.toString()});
+      return res.status(500).json({ status: 500, data: kProductionMode?[]: error.toString() });
     }
   };
 
@@ -112,7 +112,7 @@ export default class RoomController {
       return res.status(data["status"]).json({ status: data["status"], data: data["data"] });
     } catch (error) {
       debugError(error.toString());
-      return res.status(500).json({ status: 500, data: error.toString() });
+      return res.status(500).json({ status: 500, data: error.toString()});
     }
   };
 
