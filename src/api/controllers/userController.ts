@@ -631,8 +631,8 @@ export default class UserController {
       const session = this.db.session({ database: "neo4j" });
       const { id, roomId } = req.body;
       const query = `
-        MATCH (u:User {id: "${id}"})
-        SET u.rooms = u.rooms + "${roomId}"
+        MATCH (u:User {id: "${decrypt(id, config.secretKEY)}"})
+        SET u.rooms = u.rooms + "${decrypt(roomId, config.secretKEY)}"
         RETURN u.id AS id, u.rooms AS rooms
       `;
       const result = await session.run(query);
@@ -657,8 +657,8 @@ export default class UserController {
       const session = this.db.session({ database: "neo4j" });
       const { id, roomId } = req.body;
       const query = `
-        MATCH (u:User {id: "${id}"})
-        SET u.rooms = [roomID IN u.rooms WHERE roomID <> "${roomId}"]
+        MATCH (u:User {id: "${decrypt(id, config.secretKEY)}"})
+        SET u.rooms = [roomID IN u.rooms WHERE roomID <> "${decrypt(roomId, config.secretKEY)}"]
         RETURN u.id AS id, u.rooms AS rooms
       `;
       const result = await session.run(query);
@@ -683,7 +683,7 @@ export default class UserController {
       const session = this.db.session({ database: "neo4j" });
       const { id, second_Id } = req.body;
       const query = `
-        MATCH (a:User {id: $id}), (b:User {id: $second_Id})
+        MATCH (a:User {id: ${decrypt(id, config.secretKEY)}}}), (b:User {id: ${decrypt(second_Id, config.secretKEY)}}})
         MERGE (a)-[r:HAS_LIKED]->(b)
         RETURN COUNT(r) > 0 AS success
       `;
@@ -705,7 +705,7 @@ export default class UserController {
   public get_userLikes = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const session = this.db.session({ database: "neo4j" });
-      const { id } = req.body;
+      const id = decrypt(req.body.id, config.secretKEY);
       const query = `
         MATCH (a:User {id: $id})-[:HAS_LIKED]->(b)
         RETURN b.username AS username, b.email AS email, b.age AS age, b.gender AS gender,
