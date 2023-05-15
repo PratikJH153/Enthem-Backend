@@ -27,6 +27,7 @@ export default (app: Router) => {
     route.get('/returnInterests',checkAuth,userController.returnInterests);
     route.get('/getUserByIds',checkAuth,userController.getUsersByIds);
     route.get('/likes',checkAuth,userController.get_userLikes);
+    route.get('/get_likedIds',checkAuth,userController.get_likedIds);
 
     //* POST CALLS
     route.post('/', checkAuth, userController.createUser);
