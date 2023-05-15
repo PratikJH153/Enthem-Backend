@@ -62,9 +62,9 @@ export default class UserController {
     try {
       const session = this.db.session({ database: "neo4j" });
       const { id, ...params } = req.body;
-
+      console.log(params);
       if (params.hasOwnProperty('username')) {
-        const username = params.username.replace(/\s+/g, '').toLowerCase();
+        const username = params["username"].replace(/\s+/g, '').toLowerCase();
         const usernameCheckQuery = `
           MATCH (n:User)
           WHERE toLower(REPLACE(n.username, ' ', '')) = $username AND n.id <> $id
@@ -113,10 +113,10 @@ export default class UserController {
         MATCH (n:User {id:"${decrypt(req.body.id, config.secretKEY)}"})-[r:HAS_INTEREST]->(n2:Activity)
         RETURN n.id AS id, n.username AS username, n.email AS email, n.age AS age,
           n.gender AS gender, n.photoURL AS photoURL,
-          n.latitude AS latitude, n.longitude AS longitude, COLLECT(DISTINCT n2.name) AS interests;n.rooms AS rooms
+          n.latitude AS latitude, n.longitude AS longitude, COLLECT(DISTINCT n2.name) AS interests, n.rooms AS rooms;
       `;
       const result = await session.run(query);
-      if (result.records.length > 0) {
+      if (result.records.length > 0) {1
         const record = result.records[0];
         const data = {
           id: encrypt(record.get('id'), config.secretKEY) ,
