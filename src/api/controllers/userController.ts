@@ -770,7 +770,27 @@ export default class UserController {
   };
   
 
+  public get_likedIds = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const session = this.db.session({ database: "neo4j" });
+      const { id } = req.body;
+      const query = `
+        MATCH (a:User {id: $id})-[:HAS_LIKED]->(b)
+        RETURN b.id AS id
+      `;
+      const result = await session.run(query, { id });
+      session.close();
   
+      const likedIds = result.records.map((record) => ({
+        id: encrypt(record.get('id'), config.secretKEY)
+      }));
+  
+      return res.status(200).json({ status: 200, data: likedIds });
+    } catch (error) {
+      debugError(error.toString());
+      return next(error);
+    }
+  };  
   
   
 }
