@@ -19,6 +19,11 @@ const Chat = new mongoose.Schema(
     messagesID: {
         type: String,
         required: true
+    },   
+    createdAt: {
+        type: Date,
+        required:false,
+        default: Date.now
     },
   },
   { collection: 'chats', timestamps: true }

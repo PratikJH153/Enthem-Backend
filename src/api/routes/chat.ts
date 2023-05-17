@@ -11,12 +11,17 @@ export default (app: Router) => {
   const chatController = Container.get(ChatController);
 
   //* GET CALLS
-//   route.get('/', checkAuth, chatController.getAllRooms);
+  route.get('/', checkAuth, chatController.getChats);
+  // route.get('/messages', checkAuth, chatController.getMessages);
 
   //* POST CALLS
+  route.post('/', checkAuth, chatController.addChat);
 
   //*PUT CALLS
+  route.put('/block', checkAuth, chatController.blockChat);
+  route.put('/unblock', checkAuth, chatController.unblockChat);
 
   //*DELETE CALLS
+  route.delete('/', checkAuth, chatController.deleteChat)
 
 };

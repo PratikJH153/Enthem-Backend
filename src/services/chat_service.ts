@@ -1,178 +1,61 @@
+import { IChat } from 'src/interfaces/IChat';
 import { Service, Inject } from 'typedi';
-import { IRoom } from '../interfaces/IRoom';
-import { startSession } from 'mongoose';
 
 @Service()
 export default class ChatService {
 
   constructor(
-    @Inject('roomModel') private room: Models.roomModel
+    @Inject('chatModel') private chat: Models.chatModel
   ) {
   }
 
-  public async getAllRooms(page: number = 1, miles: number, coordinates: Array<Number>): Promise<any> {
-    try {
-      const skip = (page - 1) * 5;
-      const data = await this.room.find(
-        {
-          location: {
-            $near: {
-              $maxDistance: 5 * miles * 1609.344, // distance in meters (CHANGE IN MILES)
-              $geometry: {
-                type: 'Point',
-                coordinates: coordinates
-              }
-            }
-          }
+  public async getChats(chatsId: Array<string>): Promise<any> {
+    try {  
+        const data = await this.chat.find({ _id: {$in: chatsId} });
+        return {
+            data: data
         }
-      ).where(
-        {_id: {$ne: "6447eefcb4a2662c84158478"}},)
-        .sort({ createdAt: "desc" })
-        .skip(skip)
-        .limit(5)
-        .exec();
-
-      return {
-        data: data ?? []
-      };
     } catch (err) {
       throw new Error(err);
     }
   }
-
-  public async getPopularRooms(page: number = 1): Promise<any> {
+  
+  public async addChat(chatData: Map<String, Object>): Promise<any> {
     try {
-      const skip = (page - 1) * 5;
-      const data = await this.room.find()
-        .where(
-          {_id: {$ne: "6447eefcb4a2662c84158478"}},)
-        .sort({ createdAt: "desc", participants: -1 })
-        .skip(skip)
-        .limit(5)
-        .exec();
-
-      return {
-        data: data ?? []
-      };
-    } catch (err) {
-      throw new Error(err);
-    }
-  }
-
-  public async getRoom(id: string): Promise<any> {
-    try {
-      const data = await this.room.findById(id);
-      return {
-        data: data
-      };
-    } catch (err) {
-      throw new Error(err);
-    }
-  }
-
-  public async getIntroduceRoom(): Promise<any> {
-    try {
-      const data = await this.room.findById("6447eefcb4a2662c84158478");
-      return {
-        data: data
-      };
-    } catch (err) {
-      throw new Error(err);
-    }
-  }
-
-  public async getRoomsByOwnerID(ownerID: string): Promise<any> {
-    try {
-      const data = await this.room.find({ ownerID: ownerID });
-      return {
-        data: data
-      }
-    } catch (err) {
-      throw new Error(err);
-    }
-  }
-
-
-  public async addRoom(roomData: Map<String, Object>): Promise<any> {
-    try {
-      const data: IRoom = await this.room.create(roomData);
+      const data: IChat = await this.chat.create(chatData);
       if (!data) {
-        throw new Error("Could not create room!");
+        throw new Error("Could not create chat!");
       }
-      return { data: `Room created successfully!` };
-    } catch (err) {
-      throw new Error(err);
-    }
-
-  }
-
-  public async deleteRoom(roomID: string, ownerID: string): Promise<any> {
-    try {
-      const data = await this.room.deleteOne({ _id: roomID, ownerID: { $eq: ownerID } });
-      if (data["deletedCount"] > 0) {
-        return { status: 200, data: "Room deleted successfully!" };
-      } else {
-        return { status: 404, data: "RoomID or OwnerID is incorrect!" };
-      }
+      return { data: `Chat created successfully!` };
     } catch (err) {
       throw new Error(err);
     }
   }
 
-  public async addMember(roomID: string, memberID: string): Promise<any> {
-    const session = await startSession();
-    session.startTransaction();
+  public async blockChat(chatID: string, userID: string): Promise<any> {
     try {
-      const data = { status: 200, data: `Member added successfully!` };
-      const isExist = await this.room.findById(roomID).where("memberlist.memberId").in([memberID]).exec();
-      if (!isExist) {
-        await this.room.updateOne(
-          { _id: roomID }, 
-          { $push: { memberlist: { memberId: memberID, permit: false }, }},
-          { $inc: { participants: 1}}
-          );
-      } else {
-        data["status"] = 409;
-        data["data"] = "Member already exists";
+      const data: IChat = await this.chat.findByIdAndUpdate(chatID, {"isDisable": userID});
+      if (!data) {
+        throw new Error("Chat couldn't be blocked");
       }
-      await session.commitTransaction();
-      return data;
+      return { data: `Chat blocked successfully!` };
     } catch (err) {
-      await session.abortTransaction();
       throw new Error(err);
-    } finally {
-      session.endSession();
     }
   }
-
-  public async removeMember(roomID: string, memberID: string): Promise<any> {
+  
+  public async unblockChat(chatID: string, userID: string): Promise<any> {
     try {
-      const updatedRoom = await this.room.findByIdAndUpdate(
-        roomID,
-        { $pull: { memberlist: { memberId: memberID } } },
-        { $inc: { participants: -1}}
+      const data: IChat = await this.chat.findByIdAndUpdate(chatID, 
+        {"isDisable": {$eq: userID}},
+        {"isDisable": null},
       );
+      if (!data) {
+        throw new Error("Chat couldn't be unblocked");
+      } else{
 
-      if (!updatedRoom) {
-        return {data: "Room not found or you are not the owner of the room."}
       }
-
-      return { data: `Member removed successfully!` };
-    } catch (err) {
-      throw new Error(err);
-    }
-  }
-
-  public async searchRoom(substring: string): Promise<any> {
-    try {
-      const rooms = await this.room.find({
-        $or: [
-          { title: { $regex: substring, $options: 'i' } },
-          { description: { $regex: substring, $options: 'i' } }
-        ]
-      });
-
-      return { data: rooms };
+      return { data: `Chat unblocked successfully!` };
     } catch (err) {
       throw new Error(err);
     }
