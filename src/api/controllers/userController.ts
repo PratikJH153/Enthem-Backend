@@ -755,7 +755,8 @@ export default class UserController {
       const session = this.db.session({ database: "neo4j" });
       const {id} = req.body;
       const query = `
-        MATCH (a:User {id: $id})-[:HAS_LIKED]->(likedUser)
+        MATCH (a:User {id: $id})
+        OPTIONAL MATCH (a)-[:HAS_LIKED]->(likedUser)
         MATCH (n:User {id: $id})-[r:HAS_INTEREST]->(interestActivity)
         RETURN likedUser.username AS likedUsername, likedUser.email AS likedEmail, likedUser.age AS likedAge,
           likedUser.gender AS likedGender, likedUser.photoURL AS likedPhotoURL,
@@ -770,21 +771,23 @@ export default class UserController {
   
       if (result.records.length > 0) {
         const record = result.records[0];
-        const likedEntities = result.records.map((record) => ({
-          username: record.get('likedUsername'),
-          email: record.get('likedEmail'),
-          age: record.get('likedAge').toNumber(),
-          gender: record.get('likedGender'),
-          photoURL: record.get('likedPhotoURL'),
-          latitude: record.get('likedLatitude'),
-          longitude: record.get('likedLongitude')
-        }));
+        const likedEntities = result.records
+          .filter((record) => record.get('likedUsername') !== null)
+          .map((record) => ({
+            username: record.get('likedUsername'),
+            email: record.get('likedEmail'),
+            age: record.get('likedAge')?.toNumber() || 0,
+            gender: record.get('likedGender'),
+            photoURL: record.get('likedPhotoURL'),
+            latitude: record.get('likedLatitude'),
+            longitude: record.get('likedLongitude')
+          }));
   
         const data = {
           id: encrypt(record.get('id'), config.secretKEY),
           username: record.get('username'),
           email: encrypt(record.get('email'), config.secretKEY),
-          age: record.get('age').toNumber(),
+          age: record.get('age')?.toNumber() || 0,
           gender: record.get('gender'),
           photoURL: record.get('photoURL'),
           latitude: record.get('latitude'),
@@ -802,6 +805,7 @@ export default class UserController {
       return next(error);
     }
   };
+  
   
 
   public get_likedIds = async (req: Request, res: Response, next: NextFunction) => {
