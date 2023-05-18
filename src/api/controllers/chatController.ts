@@ -67,5 +67,4 @@ export default class ChatController {
       return res.status(500).json({ status: 500, data: error.toString() });
     }
   };
-
 };

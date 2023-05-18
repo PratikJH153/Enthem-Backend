@@ -106,40 +106,40 @@ export default class UserController {
   };
 
 
-  // public getUserBySessionId = async (req: Request, res: Response, next: NextFunction) => {
-  //   try {
-  //     const session = this.db.session({ database: "neo4j" });
-  //     const query = `
-  //       MATCH (n:User {id:"${decrypt(req.body.id, config.secretKEY)}"})-[r:HAS_INTEREST]->(n2:Activity)
-  //       RETURN n.id AS id, n.username AS username, n.email AS email, n.age AS age,
-  //         n.gender AS gender, n.photoURL AS photoURL,
-  //         n.latitude AS latitude, n.longitude AS longitude, COLLECT(DISTINCT n2.name) AS interests, n.rooms AS rooms;
-  //     `;
-  //     const result = await session.run(query);
-  //     if (result.records.length > 0) {1
-  //       const record = result.records[0];
-  //       const data = {
-  //         id: encrypt(record.get('id'), config.secretKEY) ,
-  //         username: record.get('username'),
-  //         email:  encrypt(record.get('email'), config.secretKEY) ,
-  //         age: record.get('age').toNumber(),
-  //         gender: record.get('gender'),
-  //         photoURL: record.get('photoURL'),
-  //         latitude: record.get('latitude'),
-  //         longitude: record.get('longitude'),
-  //         interests: record.get('interests'),
-  //         rooms:record.get('rooms')
-  //       };
-  //       session.close();
-  //       return res.status(200).json({ status: 200, data: data });
-  //     } else {
-  //       return res.status(404).json({ status: 404, data: "Sorry, No User Exists with this ID !" });
-  //     }
-  //   } catch (e) {
-  //     debugError(e.toString());
-  //     return next(e);
-  //   }
-  // };
+  public getUserBySessionId = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const session = this.db.session({ database: "neo4j" });
+      const query = `
+        MATCH (n:User {id:"${decrypt(req.body.id, config.secretKEY)}"})-[r:HAS_INTEREST]->(n2:Activity)
+        RETURN n.id AS id, n.username AS username, n.email AS email, n.age AS age,
+          n.gender AS gender, n.photoURL AS photoURL,
+          n.latitude AS latitude, n.longitude AS longitude, COLLECT(DISTINCT n2.name) AS interests, n.rooms AS rooms;
+      `;
+      const result = await session.run(query);
+      if (result.records.length > 0) {
+        const record = result.records[0];
+        const data = {
+          id: encrypt(record.get('id'), config.secretKEY) ,
+          username: record.get('username'),
+          email:  encrypt(record.get('email'), config.secretKEY) ,
+          age: record.get('age').toNumber(),
+          gender: record.get('gender'),
+          photoURL: record.get('photoURL'),
+          latitude: record.get('latitude'),
+          longitude: record.get('longitude'),
+          interests: record.get('interests'),
+          rooms:record.get('rooms')
+        };
+        session.close();
+        return res.status(200).json({ status: 200, data: data });
+      } else {
+        return res.status(404).json({ status: 404, data: "Sorry, No User Exists with this ID !" });
+      }
+    } catch (e) {
+      debugError(e.toString());
+      return next(e);
+    }
+  };
 
 
   public isUserExists = async (req: Request, res: Response, next: NextFunction) => {
@@ -750,61 +750,61 @@ export default class UserController {
   };
   
   
-  public getUserBySessionId = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const session = this.db.session({ database: "neo4j" });
-      const {id} = req.body;
-      const query = `
-        MATCH (a:User {id: $id})
-        OPTIONAL MATCH (a)-[:HAS_LIKED]->(likedUser)
-        MATCH (n:User {id: $id})-[r:HAS_INTEREST]->(interestActivity)
-        RETURN likedUser.username AS likedUsername, likedUser.email AS likedEmail, likedUser.age AS likedAge,
-          likedUser.gender AS likedGender, likedUser.photoURL AS likedPhotoURL,
-          likedUser.latitude AS likedLatitude, likedUser.longitude AS likedLongitude,
-          n.id AS id, n.username AS username, n.email AS email, n.age AS age,
-          n.gender AS gender, n.photoURL AS photoURL,
-          n.latitude AS latitude, n.longitude AS longitude, COLLECT(DISTINCT interestActivity.name) AS interests,
-          n.rooms AS rooms
-      `;
-      const result = await session.run(query, { id });
-      session.close();
+  // public getUserBySessionId = async (req: Request, res: Response, next: NextFunction) => {
+  //   try {
+  //     const session = this.db.session({ database: "neo4j" });
+  //     const id = decrypt(req.body.id, config.secretKEY);
+  //     const query = `
+  //       MATCH (a:User {id: $id})
+  //       OPTIONAL MATCH (a)-[:HAS_LIKED]->(likedUser)
+  //       MATCH (n:User {id: $id})-[r:HAS_INTEREST]->(interestActivity)
+  //       RETURN likedUser.username AS likedUsername, likedUser.email AS likedEmail, likedUser.age AS likedAge,
+  //         likedUser.gender AS likedGender, likedUser.photoURL AS likedPhotoURL,
+  //         likedUser.latitude AS likedLatitude, likedUser.longitude AS likedLongitude,
+  //         n.id AS id, n.username AS username, n.email AS email, n.age AS age,
+  //         n.gender AS gender, n.photoURL AS photoURL,
+  //         n.latitude AS latitude, n.longitude AS longitude, COLLECT(DISTINCT interestActivity.name) AS interests,
+  //         n.rooms AS rooms
+  //     `;
+  //     const result = await session.run(query, { id });
+  //     session.close();
   
-      if (result.records.length > 0) {
-        const record = result.records[0];
-        const likedEntities = result.records
-          .filter((record) => record.get('likedUsername') !== null)
-          .map((record) => ({
-            username: record.get('likedUsername'),
-            email: record.get('likedEmail'),
-            age: record.get('likedAge')?.toNumber() || 0,
-            gender: record.get('likedGender'),
-            photoURL: record.get('likedPhotoURL'),
-            latitude: record.get('likedLatitude'),
-            longitude: record.get('likedLongitude')
-          }));
+  //     if (result.records.length > 0) {
+  //       const record = result.records[0];
+  //       const likedEntities = result.records
+  //         .filter((record) => record.get('likedUsername') !== null)
+  //         .map((record) => ({
+  //           username: record.get('likedUsername'),
+  //           email: record.get('likedEmail'),
+  //           age: record.get('likedAge').toNumber(),
+  //           gender: record.get('likedGender'),
+  //           photoURL: record.get('likedPhotoURL'),
+  //           latitude: record.get('likedLatitude'),
+  //           longitude: record.get('likedLongitude')
+  //         }));
   
-        const data = {
-          id: encrypt(record.get('id'), config.secretKEY),
-          username: record.get('username'),
-          email: encrypt(record.get('email'), config.secretKEY),
-          age: record.get('age')?.toNumber() || 0,
-          gender: record.get('gender'),
-          photoURL: record.get('photoURL'),
-          latitude: record.get('latitude'),
-          longitude: record.get('longitude'),
-          interests: record.get('interests'),
-          rooms: record.get('rooms')
-        };
+  //       const data = {
+  //         id: encrypt(record.get('id'), config.secretKEY),
+  //         username: record.get('username'),
+  //         email: encrypt(record.get('email'), config.secretKEY),
+  //         age: record.get('age').toNumber(),
+  //         gender: record.get('gender'),
+  //         photoURL: record.get('photoURL'),
+  //         latitude: record.get('latitude'),
+  //         longitude: record.get('longitude'),
+  //         interests: record.get('interests'),
+  //         rooms: record.get('rooms')
+  //       };
   
-        return res.status(200).json({ status: 200, data: { likedEntities, userData: data } });
-      } else {
-        return res.status(404).json({ status: 404, data: "Sorry, No User Exists with this ID!" });
-      }
-    } catch (error) {
-      debugError(error.toString());
-      return next(error);
-    }
-  };
+  //       return res.status(200).json({ status: 200, data: { likedEntities, userData: data } });
+  //     } else {
+  //       return res.status(404).json({ status: 404, data: "Sorry, No User Exists with this ID!" });
+  //     }
+  //   } catch (error) {
+  //     debugError(error.toString());
+  //     return next(error);
+  //   }
+  // };
   
   
 
