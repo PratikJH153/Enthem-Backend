@@ -27,6 +27,7 @@ export default (app: Router) => {
     route.get('/returnInterests',checkAuth,userController.returnInterests);
     route.get('/getUserByIds',checkAuth,userController.getUsersByIds);
     route.get('/likes',checkAuth,userController.get_userLikes);
+    route.get('/get_likedIds',checkAuth,userController.get_likedIds);
 
     //* POST CALLS
     route.post('/', checkAuth, userController.createUser);
@@ -41,4 +42,5 @@ export default (app: Router) => {
     //* DELETE CALLS
     route.delete('/', checkAuth, userController.deleteUser);
     route.delete('/deleteRoom', checkAuth, userController.updateRoomsList_delete);
+    route.delete('/delete_userLike',checkAuth,userController.delete_userLike);
 };

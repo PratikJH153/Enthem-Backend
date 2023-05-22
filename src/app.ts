@@ -7,7 +7,6 @@ async function startServer() {
     const app = express();
     await require('./loaders').default({ expressApp: app });
 
-    //TODO: CHANGE THIS '0.0.0.0'
     app.listen(config.port, () => {
         console.log(`🔥🔥 Database Server connected on : ${config.databaseURL}🔥🔥 `);
         console.log(`🔥🔥 Server listening on port: ${config.port}🔥🔥 `);
