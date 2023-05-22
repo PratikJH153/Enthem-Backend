@@ -5,7 +5,8 @@ import { Service, Inject } from 'typedi';
 export default class ChatService {
 
   constructor(
-    @Inject('chatModel') private chat: Models.chatModel
+    @Inject('chatModel') private chat: Models.chatModel,
+    @Inject('messageModel') private message: Models.messageModel,
   ) {
   }
 
@@ -19,6 +20,18 @@ export default class ChatService {
       throw new Error(err);
     }
   }
+  
+  public async getMessages(messagesID: string): Promise<any> {
+    try {  
+        const data = await this.message.findById(messagesID);
+        return {
+            data: data
+        }
+    } catch (err) {
+      throw new Error(err);
+    }
+  }
+  
   
   public async addChat(chatData: Map<String, Object>): Promise<any> {
     try {

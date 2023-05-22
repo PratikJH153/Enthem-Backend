@@ -12,10 +12,12 @@ export default (app: Router) => {
 
   //* GET CALLS
   route.get('/', checkAuth, chatController.getChats);
-  // route.get('/messages', checkAuth, chatController.getMessages);
+  route.get('/messages', checkAuth, chatController.getMessages);
 
   //* POST CALLS
   route.post('/', checkAuth, chatController.addChat);
+  // route.post('/messages', checkAuth, chatController.addMessageRoom);
+  // route.post('/message', checkAuth, chatController.addMessage);
 
   //*PUT CALLS
   route.put('/block', checkAuth, chatController.blockChat);

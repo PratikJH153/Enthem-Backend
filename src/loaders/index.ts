@@ -26,7 +26,8 @@ export default async ({ expressApp }) => {
     mongoConnection,
     models: [
       roomModel,
-      chatModel
+      chatModel,
+      messageModel
     ],
   });
   

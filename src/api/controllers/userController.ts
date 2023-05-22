@@ -376,7 +376,7 @@ export default class UserController {
       const max: number = +req.query.max || 3;
       const offset: number = +req.query.offset || 0;
       const skip: number = offset * max;
-      const userId = req.body.id;
+      const userId = decrypt(req.body.id, config.secretKEY);
   
       const query = `
         MATCH (u:User)-[:HAS_INTEREST]->(s:Activity)<-[:HAS_INTEREST]-(u2:User)
@@ -486,7 +486,7 @@ export default class UserController {
       const max: number = +req.query.max || 3;
       const offset: number = +req.query.offset || 0;
       const skip: number = offset * max;
-      const userId = req.body.id;
+      const userId = decrypt(req.body.id, config.secretKEY);
   
       const query = `
         MATCH (u:User)-[:HAS_INTEREST]->(s:Activity)
