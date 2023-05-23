@@ -27,5 +27,6 @@ export default (app: Router) => {
 
   //*DELETE CALLS
   route.delete('/', checkAuth, roomController.deleteRoom);
+  route.delete('/many', checkAuth, roomController.deleteManyRooms);
 
 };
