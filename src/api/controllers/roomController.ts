@@ -151,4 +151,14 @@ export default class RoomController {
       return res.status(500).json({ status: 500, data: "Server error" });
     }
   }; 
+
+  public deleteManyRooms = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const data = await this.roomService.deleteManyRooms(req.body.createdAt);
+      return res.status(data["status"]).json({ status: data["status"], data: data["data"] });
+    } catch (error) {
+      debugError(error.toString());
+      return res.status(500).json({ status: 500, data: error.toString()});
+    }
+  };
 };

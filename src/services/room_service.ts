@@ -72,7 +72,7 @@ export default class RoomService {
 
   public async getIntroduceRoom(): Promise<any> {
     try {
-      const data = await this.room.findById("6447eefcb4a2662c84158478");
+      const data = await this.room.findById("646c7ef4c83d11d64909d21c");
       return {
         data: data
       };
@@ -109,6 +109,19 @@ export default class RoomService {
   public async deleteRoom(roomID: string, ownerID: string): Promise<any> {
     try {
       const data = await this.room.deleteOne({ _id: roomID, ownerID: { $eq: ownerID } });
+      if (data["deletedCount"] > 0) {
+        return { status: 200, data: "Room deleted successfully!" };
+      } else {
+        return { status: 404, data: "RoomID or OwnerID is incorrect!" };
+      }
+    } catch (err) {
+      throw new Error(err);
+    }
+  }
+
+  public async deleteManyRooms(createdAt: string): Promise<any> {
+    try {
+      const data = await this.room.deleteMany({ createdAt: {$gte: createdAt} });
       if (data["deletedCount"] > 0) {
         return { status: 200, data: "Room deleted successfully!" };
       } else {
