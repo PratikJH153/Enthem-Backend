@@ -13,7 +13,9 @@ const attachCurrentUser = async (req: Request, res: Response, next: NextFunction
     try{
       if (authHeader && authHeader.includes('Bearer')) {
         const token =  authHeader.split(' ')[1];
+        console.log(token);
         const decoded = jwt.verify(token, config.jwtSecret);
+        console.log(decoded);
         return next();
       }else{
         return res.sendStatus(401).send('Access denied')

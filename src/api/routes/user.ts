@@ -30,7 +30,7 @@ export default (app: Router) => {
     route.get('/get_likedIds',checkAuth,userController.get_likedIds);
 
     //* POST CALLS
-    route.post('/', checkAuth, userController.createUser);
+    route.post('/', userController.createUser);
     route.post('/interests', checkAuth, userController.createInterests);
     route.post('/addRoom',checkAuth,userController.updateRoomsList_add);
     route.post('/likes',checkAuth,userController.post_userLike);
