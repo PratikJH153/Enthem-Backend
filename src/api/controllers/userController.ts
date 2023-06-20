@@ -3,6 +3,7 @@ import { Driver } from "neo4j-driver";
 import debugError from '../../services/debug_error';
 import {decrypt, encrypt} from '../../services/encrypt';
 import config from '../../config/index';
+import Jwt from 'jsonwebtoken';
 
 export default class UserController {
   private db: Driver;
@@ -231,8 +232,12 @@ export default class UserController {
           RETURN u.username as username, u.age as age, u.email as email, u.photoURL as photoURL, u.gender as gender
         `;
         const createResult = await session.run(createQuery);
+        const token = Jwt.sign({id: userInput.id }, config.jwtSecret, {
+          expiresIn: 86400
+        });
+        console.log(token);
         session.close();
-        return res.status(200).json({ status: 200, data: "User created!" });
+        return res.status(200).json({ status: 200, data: "User created!", token: token });
       }
     } catch (error) {
       debugError(error.toString());
