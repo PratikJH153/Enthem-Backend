@@ -5,17 +5,13 @@
   "main": "src/app.ts",
   "scripts": {
     "build": "tsc",
-    "tsc": "tsc",
     "heroku-postbuild": "npm run build",
-    "start": "node build/app.js",
-    "debug": "nodemon",
+    "start": "nodemon",
     "execute": "node build/app.js",
     "inspect": "nodemon --inspect src/app.ts",
     "test": "jest",
-    "lint": "npm run lint:js ",
-    "lint:eslint": "eslint --ignore-path .gitignore --ext .ts",
-    "lint:js": "npm run lint:eslint src/",
-    "lint:fix": "npm run lint:js -- --fix"
+    "prettier": "prettier --write '**/*.{js,jsx,ts,tsx,json,md}' && eslint .",
+    "lintcheck": "prettier --check --loglevel warn '**/*.{js,jsx,ts,tsx,json,md}' && eslint ."
   },
   "author": "Enthem",
   "license": "ISC",

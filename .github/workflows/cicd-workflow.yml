@@ -1,0 +1,28 @@
+name: EnthemBackend1
+
+on:
+  push:
+    branches: [cicd-docker-ec2]
+
+jobs:
+  build:
+    runs-on: [ubuntu-latest]
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v3
+      - name: Login to docker hub
+        run: docker login -u ${{secrets.DOCKER_USERNAME}} -p ${{secrets.DOCKER_PASSWORD}}
+      - name: Build docker image
+        run: docker build -t img_enthem .
+      - name: Publish image to docker hub
+        run: docker push img_enthem:latest
+  deploy:
+    needs: build
+    runs-on: [] 
+    steps: 
+    - name: Pull image from docker hub
+      run: docker pull img_enthem:latest
+    - name: Delete old container
+      run: docker rm -f nodejs-app-container
+    - name: Run docker container
+      run: docker run -d -p 5000:5000 -name nodejs-app-container img_enthem
