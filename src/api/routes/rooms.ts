@@ -11,6 +11,7 @@ export default (app: Router) => {
   const roomController = Container.get(RoomController);
 
   //* GET CALLS
+  route.get('/test', checkAuth, roomController.test);
   route.get('/all', checkAuth, roomController.getAllRooms);
   route.get('/popular', checkAuth, roomController.getPopularRooms);
   route.get('/', checkAuth, roomController.getRoom);

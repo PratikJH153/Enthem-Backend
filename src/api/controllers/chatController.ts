@@ -4,12 +4,14 @@ import { NextFunction, Request, Response } from 'express';
 import debugError from '../../services/debug_error';
 import { kProductionMode } from '../../constants/production_mode';
 
+//! This is needed for the MVP 
+
 @Service()
 export default class ChatController {
   chatService: ChatService;
   constructor() {
     this.chatService = Container.get(ChatService);
-  }
+  } 
 
   public getChats = async (req: Request, res: Response, next:NextFunction) => {
     try{

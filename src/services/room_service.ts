@@ -73,6 +73,7 @@ export default class RoomService {
   public async getIntroduceRoom(): Promise<any> {
     try {
       const data = await this.room.findById("646c7ef4c83d11d64909d21c");
+      console.log(data);
       return {
         data: data
       };

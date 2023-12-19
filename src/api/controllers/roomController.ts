@@ -12,6 +12,11 @@ export default class RoomController {
   }
 
 
+  public test = async (req: Request, res: Response, next: NextFunction) => {
+    return res.status(200).json({ status: 200, data: "Rooms Routes Working!" });
+  };
+
+
   public getAllRooms = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const page = parseInt(req.query.page as string) || 1;

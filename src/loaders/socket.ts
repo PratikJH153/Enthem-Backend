@@ -3,7 +3,6 @@ import { Server } from "socket.io";
 import { Container } from "typedi";
 import config from "../config";
 import RoomService from "../services/room_service";
-import { decrypt } from "../services/encrypt";
 
 
 export default (app) => {
@@ -33,7 +32,7 @@ export default (app) => {
         receiverChatID: receiverChatID,
         timestamp: timestamp
       };
-      socket.broadcast.in(decrypt(receiverChatID, config.secretKEY)).emit("sendMsgServer", encryptedMsg);
+      socket.broadcast.in(receiverChatID).emit("sendMsgServer", encryptedMsg);
     });
 
     socket.on("receiveMsg", (msg) => {

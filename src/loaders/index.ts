@@ -9,7 +9,7 @@ export default async ({ expressApp }) => {
 
   const roomModel = {
     name: 'roomModel',
-    model: require('../models/room').default,
+    model: require('../models/room').default, 
   };
   
   const chatModel = {
