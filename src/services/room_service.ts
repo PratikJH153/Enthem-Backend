@@ -45,7 +45,7 @@ export default class RoomService {
       const skip = (page - 1) * 5;
       const data = await this.room.find()
         .where(
-          {_id: {$ne: "6447eefcb4a2662c84158478"}},)
+          {_id: {$ne: "646c7ef4c83d11d64909d21c"}},)
         .sort({ createdAt: "desc", participants: -1 })
         .skip(skip)
         .limit(5)

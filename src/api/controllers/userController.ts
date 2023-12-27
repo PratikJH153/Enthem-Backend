@@ -592,12 +592,17 @@ export default class UserController {
         UNWIND $interests AS interest
         MATCH (s:Interest {name: interest})
         MERGE (u)-[:HAS_INTEREST]->(s)
+        RETURN COLLECT(s) AS interests;
       `;
 
       const result = await session.run(query, {
         uid: req.body.uid,
         interests: interests,
       });
+
+      if(result.records[0]["_fields"][0].length == 0){
+        return res.status(400).json({status: 400, data: "Interests were not created!"});
+      }
 
       return res.status(201).json({ status: 201, data: "Done creating Interests" });
     } catch (e) {

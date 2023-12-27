@@ -20,8 +20,8 @@ export default (app: Router) => {
   // route.post('/message', checkAuth, chatController.addMessage);
 
   //*PUT CALLS
-  route.put('/block', checkAuth, chatController.blockChat);
-  route.put('/unblock', checkAuth, chatController.unblockChat);
+  // route.put('/block', checkAuth, chatController.blockChat);
+  // route.put('/unblock', checkAuth, chatController.unblockChat);
 
   //*DELETE CALLS
   route.delete('/', checkAuth, chatController.deleteChat)

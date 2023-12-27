@@ -28,7 +28,7 @@ export default class ChatController {
 
   public getMessages = async (req: Request, res: Response, next:NextFunction) => {
     try{
-      const data = await this.chatService.getChats(req.body.ownerID);
+      const data = await this.chatService.getMessages(req.body.ownerID);
       if (data["data"]){
         return res.status(200).json({ status: 200, data: data["data"] });
       }
