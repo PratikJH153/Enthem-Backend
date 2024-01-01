@@ -3,6 +3,10 @@ import { IRoom } from '../interfaces/IRoom';
 
 const Message = new mongoose.Schema(
     {
+        roomID: {
+            type: String,
+            required: [true, "roomID is required"]
+        },
         message: {
             type: String,
             required: [true, 'message is required'],

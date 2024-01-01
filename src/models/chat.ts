@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import { IRoom } from '../interfaces/IRoom';
+import { IMessage } from 'src/interfaces/IMessage';
 
 const Chat = new mongoose.Schema(
   {
@@ -12,13 +13,14 @@ const Chat = new mongoose.Schema(
         required: [true, 'id is required'],
     },
     isDisabled: {
-        type: String,
+        type: Boolean,
         required: false,
-        default: null
+        default: false
     },
-    messagesID: {
-        type: String,
-        required: true
+    messages: {
+        type: Array<IMessage>,
+        required: false,
+        default: []
     },   
     createdAt: {
         type: Date,

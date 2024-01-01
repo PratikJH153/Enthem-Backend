@@ -21,7 +21,6 @@ export default (app) => {
 
     //encryption and decryption in messages
     socket.on("sendMsg", (msg) => {
-      console.log("Message received!", msg);
       const receiverChatID =  msg.receiverChatID;
       const sender = msg.sender;
       const content = msg.content; // Encrypt the message content using the secret key
@@ -32,6 +31,7 @@ export default (app) => {
         receiverChatID: receiverChatID,
         timestamp: timestamp
       };
+      console.log(encryptedMsg);
       socket.broadcast.in(receiverChatID).emit("sendMsgServer", encryptedMsg);
     });
 

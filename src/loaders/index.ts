@@ -22,12 +22,18 @@ export default async ({ expressApp }) => {
     model: require('../models/message').default,
   };
 
+  const messageListModel = {
+    name: 'messageListModel',
+    model: require('../models/messageList').default,
+  };
+
   const { logger } = await dependencyInjectorLoader({
     mongoConnection,
     models: [
       roomModel,
       chatModel,
-      messageModel
+      messageModel,
+      messageListModel
     ],
   });
   
