@@ -16,8 +16,7 @@ export default (app: Router) => {
 
   //* POST CALLS
   route.post('/', checkAuth, chatController.addChat);
-  // route.post('/messages', checkAuth, chatController.addMessageRoom);
-  // route.post('/message', checkAuth, chatController.addMessage);
+  route.post('/message', checkAuth, chatController.addMessage);
 
   //*PUT CALLS
   // route.put('/block', checkAuth, chatController.blockChat);
