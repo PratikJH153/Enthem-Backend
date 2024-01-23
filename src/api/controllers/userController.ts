@@ -531,6 +531,29 @@ export default class UserController {
         ORDER BY match_percentage DESC
         SKIP ${skip} LIMIT ${max}
       `;
+
+//       MATCH (u:User)-[:HAS_INTEREST]->(s:Interest)
+// WHERE u.uid = "${userId}"
+// WITH u, COLLECT(s) AS interests
+// MATCH (u2:User)-[:HAS_INTEREST]->(s2:Interest)
+// WHERE u2.uid <> u.uid AND NOT EXISTS((u)-[:HAS_LIKED]->(u2))
+// WITH u, u2, interests, COLLECT(s2) AS interests2,
+//   radians(u.latitude) AS u_lat, radians(u.longitude) AS u_lon,
+//   radians(u2.latitude) AS u2_lat, radians(u2.longitude) AS u2_lon
+// WITH u, u2, 
+//   REDUCE(s = [], x IN interests | 
+//           s + CASE WHEN x IN interests2 THEN x ELSE [] END) AS common_interests,
+//   toFloat(size(REDUCE(s = [], x IN interests | s + x))) AS u_interests,
+//   toFloat(size(interests2)) AS u2_interests,
+//   u_lat, u_lon, u2_lat, u2_lon
+// WITH u, u2, common_interests,
+//   toFloat(size(common_interests)) / u_interests AS u_similarity,
+//   toFloat(size(common_interests)) / u2_interests AS u2_similarity,
+//   6371 * acos(sin(u_lat) * sin(u2_lat) + cos(u_lat) * cos(u2_lat) * cos(u2_lon - u_lon)) * 0.621371 AS distance_in_miles
+// WITH u, u2, common_interests, distance_in_miles
+// ORDER BY distance_in_miles ASC
+// WITH COLLECT({user: u, common_interests: common_interests}) AS group_members
+// RETURN u2, group_members;
   
       const result = await session.run(query);
       if (result.records.length > 0) {
