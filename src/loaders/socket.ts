@@ -3,7 +3,6 @@ import { Server } from "socket.io";
 import { Container } from "typedi";
 import config from "../config";
 import RoomService from "../services/room_service";
-import { decrypt } from "../services/encrypt";
 
 
 export default (app) => {
@@ -22,7 +21,6 @@ export default (app) => {
 
     //encryption and decryption in messages
     socket.on("sendMsg", (msg) => {
-      console.log("Message received!", msg);
       const receiverChatID =  msg.receiverChatID;
       const sender = msg.sender;
       const content = msg.content; // Encrypt the message content using the secret key
@@ -33,7 +31,8 @@ export default (app) => {
         receiverChatID: receiverChatID,
         timestamp: timestamp
       };
-      socket.broadcast.in(decrypt(receiverChatID, config.secretKEY)).emit("sendMsgServer", encryptedMsg);
+      console.log(encryptedMsg);
+      socket.broadcast.in(receiverChatID).emit("sendMsgServer", encryptedMsg);
     });
 
     socket.on("receiveMsg", (msg) => {
@@ -66,6 +65,7 @@ export default (app) => {
         const { id, memberID, username } = data;
         roomID = id;
         socket.join(roomID);
+        console.log(roomID);
         console.log(await roomService.addMember(roomID, memberID));
         socket.to(roomID).emit("userJoinedRoom", { memberId: memberID, username: username });
       } catch (error) {
