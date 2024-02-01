@@ -3,6 +3,7 @@ import { Driver } from "neo4j-driver";
 import debugError from '../../services/debug_error';
 import config from '../../config/index';
 import Jwt from 'jsonwebtoken';
+import { defaultPhotoURL } from '../../constants/production_mode';
 
 export default class UserController {
   private db: Driver;
@@ -14,13 +15,13 @@ export default class UserController {
 
 
   public test = async (req: Request, res: Response, next: NextFunction) => {
-    return res.status(200).json({ status: 200, data: "User Routes Working!" });
+    return res.status(200).json({ status: 200, data: `User Routes Working!`});
   };
 
 
   public getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
+    const session = this.db.session({ database: "neo4j" });
     try {
-      const session = this.db.session({ database: "neo4j" });
       const max: number = +req.query.max || 10;
       const offset: number = +req.query.offset || 0;
       const skip: number = offset * max;
@@ -47,12 +48,12 @@ export default class UserController {
         rooms: record.get('rooms')
       }));
   
-      session.close();
       return res.status(200).json({ status: 200, data: resultList });
-  
     } catch (error) {
       debugError(error.toString());
       return next(error);
+    } finally{
+      session.close();
     }
   };
   
@@ -111,7 +112,7 @@ export default class UserController {
       const session = this.db.session({ database: "neo4j" });
       console.log(req.body.uid);
       const query = `
-      MATCH (n:User {uid: '${req.body.uid}'})
+      MATCH (n:User {uid: ${req.body.uid}})
       OPTIONAL MATCH (n)-[:HAS_INTEREST]->(i:Interest)
       RETURN
         n.uid AS uid,
@@ -122,7 +123,7 @@ export default class UserController {
         n.photoURL AS photoURL,
         n.latitude AS latitude,
         n.longitude AS longitude,
-        n.rooms AS rooms,
+        n.college AS college,
         COLLECT(i.name) AS interests;
     `;
       // COLLECT(DISTINCT n2.name) AS interests
@@ -135,11 +136,11 @@ export default class UserController {
           email:  record.get('email') ,
           age: record.get('age').toNumber(),
           gender: record.get('gender'),
-          photoURL: record.get('photoURL'),
+          photoURL: record.get('photoURL') ?? defaultPhotoURL,
           latitude: record.get('latitude'),
           longitude: record.get('longitude'),
           interests: record.get('interests'),
-          rooms:record.get('rooms')
+          college: record.get('college')
         };
         session.close();
         return res.status(200).json({ status: 200, data: data });
@@ -237,10 +238,15 @@ export default class UserController {
             photoURL: "${userInput.photoURL}",
             gender: COALESCE("${userInput.gender}", "Unknown"),
             age: COALESCE(${userInput.age}, 20),
-            latitude: ${userInput.latitude},
-            longitude: ${userInput.longitude},
-            rooms: []
+            latitude: ${userInput.latitude} ?? 41.831299,
+            longitude: ${userInput.longitude} ?? -87.627274,
+            languages: ${userInput.languages},
+            college: ${userInput.college}
           })
+          WITH u, ${userInput.interests} AS interests
+          UNWIND interests AS interest
+          MATCH (i:Interest {{name: interest}})
+          CREATE (u)-[:HAS_INTEREST]->(i);
           RETURN u.username as username, u.age as age, u.email as email, u.photoURL as photoURL, u.gender as gender
         `;
         const createResult = await session.run(createQuery);
@@ -414,7 +420,52 @@ export default class UserController {
         ORDER BY distance ASC
         SKIP ${skip} LIMIT ${max}
       `;
+
+      //TODO: Algorithm with language and nationality
   
+      // MATCH (u:User)-[:HAS_INTEREST]->(s:Interest)<-[:HAS_INTEREST]-(u2:User)
+      // WHERE u.uid = 3
+      //   AND u.location IS NOT NULL 
+      //   AND u2.uid <> u.uid 
+      //   AND u2.location[0] IS NOT NULL AND u2.location[0] <> -90 AND u2.location[1] IS NOT NULL AND u2.location[1] <> 0
+      // WITH u, u2, 
+      //     u.location[0] * pi() / 180 AS lat1, u.location[1] * pi() / 180 AS lon1,
+      //     u2.location[0] * pi() / 180 AS lat2, u2.location[1] * pi() / 180 AS lon2,
+      //     3959 AS r,
+      //     CASE WHEN u.nationality = u2.nationality THEN 1 ELSE 0 END AS nationality_similarity,
+      //     CASE WHEN u.language = u2.language THEN 1 ELSE 0 END AS language_similarity,
+      //     COLLECT(DISTINCT s) AS interests_in_common
+      // WITH u, u2, lat1, lon1, lat2, lon2, r,
+      //     sin((lat2 - lat1) / 2) ^ 2 + cos(lat1) * cos(lat2) * sin((lon2 - lon1) / 2) ^ 2 AS a,
+      //     nationality_similarity, language_similarity, SIZE(interests_in_common) AS interests_in_common
+      // RETURN DISTINCT u2.username AS username, u2.email AS email, 
+      //       u2.gender AS gender, u2.age AS age, u2.location AS location, u2.photoURL AS photoURL, 
+      //       nationality_similarity, language_similarity, interests_in_common,
+      //       r * 2 * atan2(sqrt(a), sqrt(1 - a)) AS distance
+      // ORDER BY (nationality_similarity + language_similarity) DESC, interests_in_common DESC, distance ASC;
+
+      //TODO: Algorithm for Rooms
+      `
+      MATCH (room:Room)-[:HAS_OWNER]->(u2:User)
+      MATCH (u:User)-[:HAS_INTEREST]->(s:Interest)<-[:HAS_INTEREST]-(u2)
+      WHERE u.uid = 3
+        AND u.location IS NOT NULL 
+        AND u2.uid <> u.uid 
+      WITH u, u2, room,
+           u.location[0] * pi() / 180 AS lat1, u.location[1] * pi() / 180 AS lon1,
+           room.latitude * pi() / 180 AS lat2, room.longitude * pi() / 180 AS lon2,
+           3959 AS r,
+           CASE WHEN u.nationality = u2.nationality THEN 1 ELSE 0 END AS nationality_similarity,
+           CASE WHEN u.language = u2.language THEN 1 ELSE 0 END AS language_similarity,
+           COLLECT(DISTINCT s) AS interests_in_common
+      WITH u, u2, lat1, lon1, lat2, lon2, r, room,
+           sin((lat2 - lat1) / 2) ^ 2 + cos(lat1) * cos(lat2) * sin((lon2 - lon1) / 2) ^ 2 AS a,
+           nationality_similarity, language_similarity, SIZE(interests_in_common) AS interests_in_common
+      RETURN DISTINCT room,
+             r * 2 * atan2(sqrt(a), sqrt(1 - a)) AS distance, interests_in_common AS interests
+      ORDER BY distance ASC, interests;
+      `
+
       const result = await session.run(query);
       if (result.records.length > 0) {
         const resultList = result.records.map((record) => ({
@@ -578,31 +629,6 @@ export default class UserController {
       return next(e);
     }
   };
-  
-
-
-  public createSkills = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const session = this.db.session({ database: "neo4j" });
-      const skills = req.body.skills.map(skill => `"${skill}"`).join(', ');
-      const query = `
-      WITH [${skills}] AS skillsList
-      UNWIND skillsList AS skill
-      MERGE (s:Interest {name:skill})
-      WITH s
-      MATCH (u:User {uid:"${req.body.uid}"})
-      MERGE (u)-[:HAS_SKILL]->(s)
-    `;
-
-      const result = await session.run(query);
-      session.close();
-      return res.status(201).json({ status: 201, data: "Done creating skills" });
-    } catch (e) {
-      debugError(e.toString());
-      return next(e);
-    }
-  };
-
 
   public createInterests = async (req: Request, res: Response, next: NextFunction) => {
     const session = this.db.session({ database: "neo4j" });
@@ -615,7 +641,7 @@ export default class UserController {
         UNWIND $interests AS interest
         MATCH (s:Interest {name: interest})
         MERGE (u)-[:HAS_INTEREST]->(s)
-        RETURN COLLECT(s) AS interests;
+        RETURN true;
       `;
 
       const result = await session.run(query, {
@@ -648,36 +674,6 @@ export default class UserController {
       session.close();
       if (result2.records[0]["_fields"][0].length > 0) {
         return res.status(200).json({ status: 200, data: result2.records[0]["_fields"][0] });
-      } else {
-        return res.status(404).json({ status: 404, data: [] });
-      }
-    } catch (e) {
-      debugError(e.toString());
-      return next(e);
-    }
-  };
-
-
-  public returnInterests = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const session = this.db.session({ database: "neo4j" });
-      const query1 = `
-      MATCH (n:User{uid:"${req.body.uid}"})
-      RETURN n.uid AS uid
-    `;
-      const result1 = await session.run(query1);
-      if (result1.records.length === 0) {
-        return res.status(404).json({ status: 404, message: "Sorry, no user with the given uid exists." });
-      }
-      const query2 = `
-      MATCH (n:User{uid:"${req.body.uid}"})-[r:HAS_INTEREST]->(n2:Interest)
-      RETURN COLLECT(DISTINCT n2.name) AS interests
-    `;
-      const result2 = await session.run(query2);
-      session.close();
-      if (result2.records.length > 0) {
-        const interests = result2.records[0].get('interests');
-        return res.status(200).json({ status: 200, data: interests });
       } else {
         return res.status(404).json({ status: 404, data: [] });
       }
@@ -815,7 +811,7 @@ export default class UserController {
     }
   };
 
-  public updateRoomsList_delete = async (req: Request, res: Response, next: NextFunction) => {
+  public deleteRooms = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const session = this.db.session({ database: "neo4j" });
       const { uid, roomId } = req.body;
@@ -994,6 +990,8 @@ export default class UserController {
       return next(error);
     }
   };  
+
+  public deleteInterests = async (req:Request, res:Response, next:NextFunction) => {}
   
   
 }

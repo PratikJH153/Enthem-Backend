@@ -1,5 +1,5 @@
 export interface IUser {
-    id: string;
+    uid: string;
     username: string;
     email: string;
     photoURL: string;
@@ -8,4 +8,6 @@ export interface IUser {
     interests: Array<String>;
     latitude: number;
     longitude: number;
+    languages: Array<String>;
+    college: String;
 }

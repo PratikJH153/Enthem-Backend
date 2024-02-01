@@ -9,11 +9,6 @@ const Room = new mongoose.Schema(
       maxlength: 100,
       minlength: 3
     },
-    tags: [{
-      type: String,
-      required: false,
-      default: "default"
-    }],
     defaultRoom: {
       type: Boolean,
       required: false,
