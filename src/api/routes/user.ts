@@ -10,7 +10,7 @@ const route = Router();
 export default (app: Router) => {
     app.use('/user', route);
 
-    const db: Driver = driver(config.databaseURL, auth.basic(config.dbUser, config.dbPass),
+    const db: Driver = driver(config.testDBUrl, auth.basic(config.dbUser, config.testDBPass),
       {/* encrypted: 'ENCRYPTION_OFF' */ },);
     const userController = new UserController(db);
     
@@ -20,20 +20,19 @@ export default (app: Router) => {
     route.get('/', checkAuth, userController.getUserBySessionId);
     route.get('/exists', checkAuth, userController.isUserExists);
     route.get('/usernameexists', checkAuth, userController.isUsernameExists);
-    route.get('/nearby', checkAuth, userController.nearBy);
-    route.get('/foryou',checkAuth, userController.forYou);
+    // route.get('/nearby', checkAuth, userController.nearBy);
+    // route.get('/foryou',checkAuth, userController.forYou);
     route.get('/interests',checkAuth, userController.interestsUser);
-    route.get('/custom_fetch',checkAuth,userController.custom_fetch);
-    route.get('/returnInterests',checkAuth,userController.returnInterests);
+    // route.get('/custom_fetch',checkAuth,userController.custom_fetch);
     route.get('/getUserByIds',checkAuth,userController.getUsersByIds);
-    route.get('/likes',checkAuth,userController.get_userLikes);
-    route.get('/get_likedIds',checkAuth,userController.get_likedIds);
+    // route.get('/likes',checkAuth,userController.get_userLikes);
+    // route.get('/get_likedIds',checkAuth,userController.get_likedIds);
 
     //* POST CALLS
     route.post('/', userController.createUser);
     route.post('/interests', checkAuth, userController.createInterests);
     route.post('/addRoom',checkAuth,userController.updateRoomsList_add);
-    route.post('/likes',checkAuth,userController.post_userLike);
+    // route.post('/likes',checkAuth,userController.post_userLike);
 
     //* PUT CALLS
     route.put('/', checkAuth, userController.updateUser);
@@ -41,6 +40,7 @@ export default (app: Router) => {
 
     //* DELETE CALLS
     route.delete('/', checkAuth, userController.deleteUser);
-    route.delete('/deleteRoom', checkAuth, userController.updateRoomsList_delete);
-    route.delete('/delete_userLike',checkAuth,userController.delete_userLike);
+    route.delete('/deleteRoom', checkAuth, userController.deleteRooms);
+    // route.delete('/delete_userLike',checkAuth,userController.delete_userLike);
+    route.delete('/interests', checkAuth, userController.deleteInterests);
 };

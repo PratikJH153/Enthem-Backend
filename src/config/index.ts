@@ -19,6 +19,8 @@ export default {
   databaseURL: process.env.DB_HOST,
   dbUser: process.env.DB_USER,
   dbPass: process.env.DB_PASSWORD,
+  testDBUrl:process.env.TEST_DB_HOST,
+  testDBPass:process.env.TEST_DB_PASSWORD,
   progressToken: process.env.PROGRESS_TOKEN,
   
   mongoDB: process.env.MONGO_DB_URL,
