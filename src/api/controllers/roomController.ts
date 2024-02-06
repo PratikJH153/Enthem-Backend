@@ -166,4 +166,5 @@ export default class RoomController {
       return res.status(500).json({ status: 500, data: error.toString()});
     }
   };
-};
+
+  };

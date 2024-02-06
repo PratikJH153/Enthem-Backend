@@ -4,6 +4,7 @@ import debugError from '../../services/debug_error';
 import config from '../../config/index';
 import Jwt from 'jsonwebtoken';
 import { defaultPhotoURL } from '../../constants/production_mode';
+import { UserFactory } from '../../interfaces/IUser';
 
 export default class UserController {
   private db: Driver;
@@ -28,25 +29,16 @@ export default class UserController {
   
       const query = `
         MATCH (n:User)
+        OPTIONAL MATCH (n)-[:HAS_INTEREST]->(i:Interest)
         RETURN n.uid AS uid, n.username AS username, n.email AS email, n.age AS age,
-          n.gender AS gender, n.photoURL AS photoURL,
-          n.latitude AS latitude, n.longitude AS longitude, n.rooms AS rooms
+          n.gender AS gender, n.photoURL AS photoURL, n.languages as languages, n.college as college,
+          n.latitude AS latitude, n.longitude AS longitude, COLLECT(i.name) AS interests
         SKIP ${skip} LIMIT ${max};
       `;
   
       const result = await session.run(query);
   
-      const resultList = result.records.map(record => ({
-        uid: record.get('uid'),
-        username: record.get('username'),
-        email: record.get('email'),
-        age: record.get('age').toNumber(),
-        gender: record.get('gender'),
-        photoURL: record.get('photoURL'),
-        latitude: record.get('latitude'),
-        longitude: record.get('longitude'),
-        rooms: record.get('rooms')
-      }));
+      const resultList = result.records.map(record => ( UserFactory.createUserFromRecord(record)));
   
       return res.status(200).json({ status: 200, data: resultList });
     } catch (error) {
