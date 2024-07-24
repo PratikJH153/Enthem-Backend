@@ -1,6 +1,8 @@
 # syntax=docker/dockerfile:1
+
+ARG CLOUD_LOGGING_ONLY=true
    
-FROM node:latest
+FROM node:21-alpine3.18 
 WORKDIR /app
 COPY package*.json ./
 RUN npm install 

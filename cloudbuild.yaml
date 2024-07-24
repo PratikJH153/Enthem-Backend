@@ -1,0 +1,7 @@
+steps:
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['build', '-t', 'gcr.io/enthem-429703/enthembackend:$COMMIT_SHA', '--build-arg', 'CLOUD_LOGGING_ONLY=true', '.']
+images:
+- 'gcr.io/enthem-429703/enthembackend:$COMMIT_SHA'
+options:
+  logging: CLOUD_LOGGING_ONLY
