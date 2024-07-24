@@ -104,7 +104,7 @@ export default class UserController {
       const session = this.db.session({ database: "neo4j" });
       console.log(req.body.uid);
       const query = `
-      MATCH (n:User {uid: ${req.body.uid}})
+      MATCH (n:User {uid: '${req.body.uid}'})
       OPTIONAL MATCH (n)-[:HAS_INTEREST]->(i:Interest)
       RETURN
         n.uid AS uid,
@@ -192,11 +192,11 @@ export default class UserController {
   };
 
 
-
   public createUser = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const session = this.db.session({ database: "neo4j" });
       const userInput = req.body;
+      
       // Check if all required properties are present
       if (!userInput.uid || !userInput.username || !userInput.email || userInput.latitude == null || userInput.longitude == null) {
         return res.status(400).json({ error: "Missing required fields" });
@@ -211,18 +211,17 @@ export default class UserController {
   
       if (emailResult.records.length > 0) {
         // User already exists, so update their uid
-        const existingUser = emailResult.records[0].get("u").properties;
         const updateQuery = `
           MATCH (u:User { email: "${userInput.email}" })
           SET u.uid = "${userInput.uid}"
           RETURN u
         `;
-        const updateResult = await session.run(updateQuery);
+        await session.run(updateQuery);
         session.close();
         return res.status(200).json({ status: 200, data: "User updated!" });
       } else {
         // User doesn't exist, so create a new one
-        const createQuery = `
+        const createUserQuery = `
           CREATE (u:User {
             uid: "${userInput.uid}",
             username: "${userInput.username}",
@@ -230,19 +229,24 @@ export default class UserController {
             photoURL: "${userInput.photoURL}",
             gender: COALESCE("${userInput.gender}", "Unknown"),
             age: COALESCE(${userInput.age}, 20),
-            latitude: ${userInput.latitude} ?? 41.831299,
-            longitude: ${userInput.longitude} ?? -87.627274,
-            languages: ${userInput.languages},
-            college: ${userInput.college}
+            latitude: ${userInput.latitude},
+            longitude: ${userInput.longitude},
+            languages: ${userInput.languages? JSON.stringify(userInput.languages): null},
+            college: ${userInput.college ? JSON.stringify(userInput.college): null}
           })
-          WITH u, ${userInput.interests} AS interests
-          UNWIND interests AS interest
-          MATCH (i:Interest {{name: interest}})
-          CREATE (u)-[:HAS_INTEREST]->(i);
-          RETURN u.username as username, u.age as age, u.email as email, u.photoURL as photoURL, u.gender as gender
+          RETURN u
         `;
-        const createResult = await session.run(createQuery);
-        const token = Jwt.sign({uid: userInput.uid }, config.jwtSecret, {
+        await session.run(createUserQuery);
+  
+        const createInterestsQuery = `
+          MATCH (u:User { email: "${userInput.email}" })
+          UNWIND ${JSON.stringify(userInput.interests)} AS interest
+          MATCH (i:Interest {name: interest})
+          CREATE (u)-[:HAS_INTEREST]->(i)
+        `;
+        await session.run(createInterestsQuery);
+  
+        const token = Jwt.sign({ uid: userInput.uid }, config.jwtSecret, {
           expiresIn: 86400
         });
         console.log(token);
@@ -254,6 +258,7 @@ export default class UserController {
       return next(error);
     }
   };
+  
 
 
   public deleteUser = async (req: Request, res: Response, next: NextFunction) => {
@@ -626,7 +631,7 @@ export default class UserController {
     const session = this.db.session({ database: "neo4j" });
     try {
       const interests = req.body.interests.map(interest => `${interest}`);
-      
+  
       const query = `
         MATCH (u:User {uid: $uid})
         WITH u
@@ -635,16 +640,18 @@ export default class UserController {
         MERGE (u)-[:HAS_INTEREST]->(s)
         RETURN true;
       `;
-
+  
       const result = await session.run(query, {
         uid: req.body.uid,
         interests: interests,
       });
 
-      if(result.records[0]["_fields"][0].length == 0){
-        return res.status(400).json({status: 400, data: "Interests were not created!"});
-      }
 
+  
+      if (result.records.length === 0 || result.records[0].get(0) !== true) {
+        return res.status(400).json({ status: 400, data: "Interests were not created!" });
+      }
+  
       return res.status(201).json({ status: 201, data: "Done creating Interests" });
     } catch (e) {
       debugError(e.toString());
@@ -653,6 +660,7 @@ export default class UserController {
       session.close();
     }
   };
+  
 
 
   public interestsUser = async (req: Request, res: Response, next: NextFunction) => {
