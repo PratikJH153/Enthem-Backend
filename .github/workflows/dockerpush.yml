@@ -39,11 +39,6 @@ jobs:
     needs: "push_to_registry"
     runs-on: ubuntu-latest
     steps:
-    - name: Debug SSH key
-      run: |
-        echo "${{ secrets.GCP_SSH_PRIVATE_KEY }}" > private_key.pem
-        chmod 600 private_key.pem
-        ssh-keygen -l -f private_key.pem
     - name: executing remote ssh commands using password
       uses: appleboy/ssh-action@master
       with:
