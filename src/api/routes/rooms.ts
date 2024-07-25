@@ -13,7 +13,7 @@ export default (app: Router) => {
 
   const roomController = Container.get(RoomController);
 
-  const db: Driver = driver(config.testDBUrl, auth.basic(config.dbUser, config.testDBPass),
+  const db: Driver = driver(config.databaseURL, auth.basic(config.dbUser, config.dbPass),
   {/* encrypted: 'ENCRYPTION_OFF' */ },);
 
   const testRoomController: TestRoomController = new TestRoomController(db);
