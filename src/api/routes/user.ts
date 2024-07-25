@@ -10,7 +10,7 @@ const route = Router();
 export default (app: Router) => {
     app.use('/user', route);
 
-    const db: Driver = driver(config.testDBUrl, auth.basic(config.dbUser, config.testDBPass),
+    const db: Driver = driver(config.databaseURL, auth.basic(config.dbUser, config.dbPass),
       {/* encrypted: 'ENCRYPTION_OFF' */ },);
     const userController = new UserController(db);
     
