@@ -42,11 +42,11 @@ jobs:
     - name: executing remote ssh commands using password
       uses: appleboy/ssh-action@master
       with:
-        host: ${{ secrets.HOST }}
-        username: ${{ secrets.USERNAME }}
+        host: ${{ secrets.DB_HOST }}
+        username: ${{ secrets.DB_USER }}
         key: ${{ secrets.SSH_PRIVATE_KEY }}
-        password: ${{ secrets.PASSWORD }}
-        port: ${{ secrets.PORT }}
+        password: ${{ secrets.DB_PASSWORD }}
+        port: ${{ secrets.DB_PORT }}
         script: |
           set -e
           bash update.sh
