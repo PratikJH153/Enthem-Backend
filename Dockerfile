@@ -10,6 +10,8 @@ RUN npm i ts-node typescript
 COPY . .
 RUN npm run build
 
+COPY .env .
+
 ENV PORT=8080
 ENV SOCKET_PORT=8000
 ENV DB_HOST=neo4j+s://b62fcb89.databases.neo4j.io:7687
