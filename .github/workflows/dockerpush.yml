@@ -39,13 +39,6 @@ jobs:
     needs: "push_to_registry"
     runs-on: ubuntu-latest
     steps:
-    - name: Debug
-      run: |
-        echo "Host is set: ${{ secrets.HOST != '' }}"
-        echo "Username is set: ${{ secrets.USERNAME != '' }}"
-        echo "SSH key is set: ${{ secrets.SSH_PRIVATE_KEY != '' }}"
-        echo "Port is set: ${{ secrets.PORT != '' }}"
-        
     - name: executing remote ssh commands using password
       uses: appleboy/ssh-action@master
       with:
