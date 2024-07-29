@@ -239,7 +239,7 @@ export default class UserController {
         await session.run(createUserQuery);
   
         const createInterestsQuery = `
-          MATCH (u:User { email: "${userInput.email}" })
+          MATCH (u:User { uid: "${userInput.uid}" })
           UNWIND ${JSON.stringify(userInput.interests)} AS interest
           MATCH (i:Interest {name: interest})
           CREATE (u)-[:HAS_INTEREST]->(i)
