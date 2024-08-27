@@ -1,6 +1,8 @@
-# Project Name
+# Enthem
 
 **Enthem - Connecting People through Recommendations**
+
+**The Demonstration of the Project is stored in the ProjectDocuments Folder
 
 ## Table of Contents
 
